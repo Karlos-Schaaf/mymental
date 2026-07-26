@@ -8,11 +8,11 @@ import {
 
 import { colors, fonts, spacing } from '../src/constants/theme';
 
-export default function profileScreen() {
+export default function resourcesScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
-        <Text style={styles.title}>Profile</Text>
+        <Text style={styles.title}>Resources</Text>
       </View>
     </SafeAreaView>
   );
