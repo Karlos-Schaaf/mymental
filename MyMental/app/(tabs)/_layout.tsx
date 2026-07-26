@@ -2,6 +2,8 @@ import { Tabs } from 'expo-router';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, fonts } from '../src/constants/theme';
 
+//Legacy branch of code we can reference
+
 function TabIcon({
   symbol,
   label,
