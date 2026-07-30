@@ -6,7 +6,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 
-import { colors, fonts, spacing } from '../src/constants/theme';
+import { colors, fonts, spacing } from '../../src/constants/theme';
 
 export default function insightsScreen() {
   return (
