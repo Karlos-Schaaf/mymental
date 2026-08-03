@@ -1,82 +1,203 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
-  Button,
   StyleSheet,
-} from "react-native";
+  TouchableOpacity,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  ActivityIndicator,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../../src/firebase/auth";
+import { colors, fonts, spacing, radius } from '../../src/constants/theme';
+import { signup } from '../../src/firebase/auth';
+import AuthTextField from '../../src/components/AuthTextField';
 
+export default function SignupScreen() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-export default function Signup() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const canSubmit =
+    email.trim().length > 0 && password.length > 0 && confirmPassword.length > 0;
 
-  async function handleSignup() {
-  console.log("Signup button pressed");
-  console.log("Email:", JSON.stringify(email));
-  console.log("Password:", JSON.stringify(password));
+  const handleSignup = async () => {
+    if (!canSubmit) return;
 
-  try {
-    const userCredential = await createUserWithEmailAndPassword(
-      auth,
-      email.trim(),
-      password
-    );
+    if (password.length < 6) {
+      Alert.alert('Password too short', 'Use at least 6 characters.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      Alert.alert('Passwords do not match', 'Please check both fields.');
+      return;
+    }
 
-    console.log("User created:", userCredential.user.email);
-
-  } catch (error) {
-    console.log("Signup error:", error);
-  }
-}
+    setLoading(true);
+    try {
+      await signup(email.trim(), password);
+      // Successful sign-up is picked up by the auth listener in the root
+      // layout, which redirects into the app automatically.
+    } catch (error: any) {
+      Alert.alert('Sign Up Failed', error.message ?? 'Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>
-        Create Account
-      </Text>
+    <SafeAreaView style={styles.safe}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.logoCircle}>
+            <Ionicons name="leaf-outline" size={30} color={colors.teal} />
+          </View>
 
-      <TextInput
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        style={styles.input}
-      />
+          <Text style={styles.title}>Create Account</Text>
+          <Text style={styles.subtitle}>
+            Start your journaling journey today
+          </Text>
 
-      <TextInput
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        style={styles.input}
-      />
+          <View style={styles.form}>
+            <AuthTextField
+              icon="mail-outline"
+              placeholder="Email"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              autoComplete="email"
+            />
 
-      <Button
-        title="Sign Up"
-        onPress={handleSignup}
-      />
-    </View>
+            <AuthTextField
+              icon="lock-closed-outline"
+              placeholder="Password"
+              value={password}
+              onChangeText={setPassword}
+              isPassword
+              autoCapitalize="none"
+            />
+
+            <AuthTextField
+              icon="lock-closed-outline"
+              placeholder="Confirm password"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              isPassword
+              autoCapitalize="none"
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.primaryButton, !canSubmit && styles.buttonDisabled]}
+            onPress={handleSignup}
+            disabled={!canSubmit || loading}
+            activeOpacity={0.85}
+          >
+            {loading ? (
+              <ActivityIndicator color={colors.white} />
+            ) : (
+              <Text style={styles.primaryButtonText}>Sign Up</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => router.push('/authentication/login')}
+            activeOpacity={0.6}
+            style={styles.footerLink}
+          >
+            <Text style={styles.footerText}>
+              Already have an account?{' '}
+              <Text style={styles.footerTextAccent}>Log in</Text>
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container:{
-    flex:1,
-    justifyContent:"center",
-    padding:20,
+  safe: {
+    flex: 1,
+    backgroundColor: colors.paper,
   },
-  title:{
-    fontSize:28,
-    marginBottom:20,
+  flex: {
+    flex: 1,
   },
-  input:{
-    borderWidth:1,
-    padding:12,
-    marginBottom:15,
-    borderRadius:8,
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xxl,
+  },
+  logoCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: radius.full,
+    backgroundColor: colors.tealLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    alignSelf: 'center',
+    marginBottom: spacing.xl,
+  },
+  title: {
+    fontFamily: fonts.serif,
+    fontSize: 30,
+    color: colors.ink,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontFamily: fonts.sans,
+    fontSize: 14,
+    color: colors.muted,
+    textAlign: 'center',
+    marginTop: spacing.xs,
+    marginBottom: spacing.xxl,
+  },
+  form: {
+    gap: spacing.md,
+    marginBottom: spacing.xl,
+  },
+  primaryButton: {
+    backgroundColor: colors.coral,
+    borderRadius: radius.full,
+    height: 52,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  buttonDisabled: {
+    backgroundColor: colors.coralMid,
+  },
+  primaryButtonText: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 15,
+    color: colors.white,
+  },
+  footerLink: {
+    marginTop: spacing.xxl,
+    alignItems: 'center',
+  },
+  footerText: {
+    fontFamily: fonts.sans,
+    fontSize: 14,
+    color: colors.muted,
+  },
+  footerTextAccent: {
+    fontFamily: fonts.sansSemiBold,
+    color: colors.coral,
   },
 });
