@@ -17,20 +17,18 @@ const Radius = { sm: 10, lg: 16 };
 export type JournalEntry = {
   id: string;
   content: string;
-  date: string;
+  createdAt: string;
   mood?: MoodLevel;
 };
 
-// TODO: Replace with real mood store when teammate's mood feature is ready
-// Shape expected: { date: string (ISO), mood: MoodLevel }
 export type MoodEntry = {
-  date: string;
+  createdAt: string;
   mood: MoodLevel;
 };
 
 type Props = {
   entries: JournalEntry[];
-  moodEntries?: MoodEntry[]; // plug in from mood store when ready
+  moodEntries?: MoodEntry[];
   onDayPress: (date: string) => void;
 };
 
@@ -49,39 +47,35 @@ export default function MoodCalendar({ entries, moodEntries = [], onDayPress }: 
   const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
 
-  // Build a map of date string → mood for quick lookup
-  // Journal entries take priority; mood entries fill in the rest
   const moodMap: Record<string, MoodLevel> = {};
 
   moodEntries.forEach((m) => {
-    const key = toDateKey(m.date);
-    moodMap[key] = m.mood;
+    const key = toDateKey(m.createdAt);
+    if (key) moodMap[key] = m.mood;
   });
 
   entries.forEach((e) => {
-    const key = toDateKey(e.date);
-    if (e.mood) moodMap[key] = e.mood; // journal mood overrides if present
+    const key = toDateKey(e.createdAt);
+    if (key && e.mood) moodMap[key] = e.mood;
+  });
+
+  // Mark days that have entries even without mood
+  const entryDays: Record<string, boolean> = {};
+  entries.forEach((e) => {
+    const key = toDateKey(e.createdAt);
+    if (key) entryDays[key] = true;
   });
 
   const goToPrev = () => {
-    if (currentMonth === 0) {
-      setCurrentMonth(11);
-      setCurrentYear((y) => y - 1);
-    } else {
-      setCurrentMonth((m) => m - 1);
-    }
+    if (currentMonth === 0) { setCurrentMonth(11); setCurrentYear((y) => y - 1); }
+    else setCurrentMonth((m) => m - 1);
   };
 
   const goToNext = () => {
-    if (currentMonth === 11) {
-      setCurrentMonth(0);
-      setCurrentYear((y) => y + 1);
-    } else {
-      setCurrentMonth((m) => m + 1);
-    }
+    if (currentMonth === 11) { setCurrentMonth(0); setCurrentYear((y) => y + 1); }
+    else setCurrentMonth((m) => m + 1);
   };
 
-  // Build grid cells: leading blanks + day numbers
   const cells: (number | null)[] = [
     ...Array(firstDayOfMonth).fill(null),
     ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
@@ -89,63 +83,53 @@ export default function MoodCalendar({ entries, moodEntries = [], onDayPress }: 
 
   return (
     <View style={styles.container}>
-
-      {/* Month Navigation */}
       <View style={styles.navRow}>
-        <TouchableOpacity onPress={goToPrev} style={styles.navBtn} accessibilityLabel="Previous month">
+        <TouchableOpacity onPress={goToPrev} style={styles.navBtn}>
           <Text style={styles.navArrow}>‹</Text>
         </TouchableOpacity>
         <Text style={styles.monthLabel}>{monthLabel}</Text>
-        <TouchableOpacity onPress={goToNext} style={styles.navBtn} accessibilityLabel="Next month">
+        <TouchableOpacity onPress={goToNext} style={styles.navBtn}>
           <Text style={styles.navArrow}>›</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Day Labels */}
       <View style={styles.dayLabelsRow}>
         {DAYS.map((d) => (
           <Text key={d} style={styles.dayLabel}>{d}</Text>
         ))}
       </View>
 
-      {/* Calendar Grid */}
       <View style={styles.grid}>
         {cells.map((day, index) => {
-          if (day === null) {
-            return <View key={`blank-${index}`} style={styles.cell} />;
-          }
+          if (day === null) return <View key={`blank-${index}`} style={styles.cell} />;
 
           const dateStr = toDateKey(new Date(currentYear, currentMonth, day).toISOString());
           const mood = moodMap[dateStr];
+          const hasEntry = entryDays[dateStr];
           const isToday =
             day === today.getDate() &&
             currentMonth === today.getMonth() &&
             currentYear === today.getFullYear();
-          const hasMood = !!mood;
 
           return (
             <TouchableOpacity
               key={day}
               style={[
                 styles.cell,
-                hasMood && { backgroundColor: getMoodColor(mood) },
+                hasEntry && !mood && { backgroundColor: '#E6E6E6' },
+                mood && { backgroundColor: getMoodColor(mood) },
                 isToday && styles.todayCell,
               ]}
               onPress={() => onDayPress(new Date(currentYear, currentMonth, day).toISOString())}
-              accessibilityLabel={`${day} ${monthLabel}${hasMood ? `, mood: ${mood}` : ''}`}
             >
-              <Text style={[styles.dayNumber, isToday && styles.todayText]}>
-                {day}
-              </Text>
-              {hasMood && (
-                <Text style={styles.moodDot}>{getMoodEmoji(mood)}</Text>
-              )}
+              <Text style={[styles.dayNumber, isToday && styles.todayText]}>{day}</Text>
+              {mood && <Text style={styles.moodDot}>{getMoodEmoji(mood)}</Text>}
+              {hasEntry && !mood && <Text style={styles.moodDot}>📝</Text>}
             </TouchableOpacity>
           );
         })}
       </View>
 
-      {/* Legend */}
       <View style={styles.legend}>
         {[
           { mood: 'very_bad' as MoodLevel, label: 'Very Bad' },
@@ -165,7 +149,13 @@ export default function MoodCalendar({ entries, moodEntries = [], onDayPress }: 
 }
 
 function toDateKey(isoString: string): string {
-  return new Date(isoString).toISOString().split('T')[0]; // "YYYY-MM-DD"
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return '';
+    return d.toISOString().split('T')[0];
+  } catch {
+    return '';
+  }
 }
 
 const styles = StyleSheet.create({
@@ -181,12 +171,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 2 },
   },
-  navRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.sm,
-  },
+  navRow:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.sm },
   navBtn:       { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   navArrow:     { fontSize: 24, color: Colors.primary, fontWeight: '600' },
   monthLabel:   { fontSize: 16, fontWeight: '600', color: Colors.text },
@@ -205,13 +190,7 @@ const styles = StyleSheet.create({
   dayNumber:    { fontSize: 13, color: Colors.text },
   todayText:    { fontWeight: 'bold', color: Colors.primary },
   moodDot:      { fontSize: 10, marginTop: 1 },
-  legend: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: Spacing.md,
-    flexWrap: 'wrap',
-    gap: Spacing.xs,
-  },
+  legend:       { flexDirection: 'row', justifyContent: 'space-between', marginTop: Spacing.md, flexWrap: 'wrap', gap: Spacing.xs },
   legendItem:   { flexDirection: 'row', alignItems: 'center', gap: 4 },
   legendDot:    { width: 10, height: 10, borderRadius: 5 },
   legendLabel:  { fontSize: 11, color: Colors.secondary },

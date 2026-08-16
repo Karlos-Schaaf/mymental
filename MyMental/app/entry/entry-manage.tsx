@@ -48,12 +48,12 @@ export default function EntryManageScreen() {
     );
   }
 
-  const formattedDate = new Date(entry.date).toLocaleDateString('en-NZ', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-  });
-  const formattedTime = new Date(entry.date).toLocaleTimeString('en-NZ', {
-    hour: '2-digit', minute: '2-digit',
-  });
+  const formattedDate = new Date(entry.createdAt).toLocaleDateString('en-NZ', {
+  weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+});
+  const formattedTime = new Date(entry.createdAt).toLocaleTimeString('en-NZ', {
+  hour: '2-digit', minute: '2-digit',
+});
 
   // Trello Card #7 - save edits
   const handleSave = () => {

@@ -48,10 +48,10 @@ export default function NewJournalScreen() {
 
     // Acceptance Test: entry stored with date and time
     const now = new Date();
-            addEntry({
+    addEntry({
       title: title.trim() || undefined,
       content: content.trim(),
-      date: now.toISOString(),
+      createdAt: now.toISOString(),
     });
 
     router.back();

@@ -23,8 +23,8 @@ export default function JournalHomeScreen() {
   const { entries } = useJournalEntries();
 
   const sortedEntries = [...entries].sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-  );
+  (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+);
   const recentEntries = sortedEntries.slice(0, 3);
 
   return (
@@ -70,9 +70,11 @@ export default function JournalHomeScreen() {
                   {item.title ?? item.content.slice(0, 40) + (item.content.length > 40 ? '…' : '')}
                 </Text>
                 <Text style={styles.entryDate}>
-                  {new Date(item.date).toLocaleDateString('en-NZ', {
-                    month: 'long', day: 'numeric', year: 'numeric',
-                  })}
+                  {item.createdAt && !isNaN(new Date(item.createdAt).getTime())
+                    ? new Date(item.createdAt).toLocaleDateString('en-NZ', {
+                        month: 'long', day: 'numeric', year: 'numeric',
+                  })
+                  : 'No date'}
                 </Text>
               </View>
               <Text style={styles.chevron}>›</Text>
@@ -83,10 +85,10 @@ export default function JournalHomeScreen() {
         {/* Mood Calendar */}
         <Text style={[styles.sectionLabel, { marginTop: Spacing.lg }]}>Mood Calendar</Text>
         <MoodCalendar
-          entries={entries}
-          onDayPress={(date) =>
-            router.push({ pathname: '/entry/day-view', params: { date } })
-          }
+        entries={entries}
+        onDayPress={(date) =>
+          router.push({ pathname: '/entry/day-view', params: { date } })
+        }
         />
 
         <View style={{ height: 100 }} />

@@ -30,9 +30,16 @@ export default function DayViewScreen() {
   const selectedDate = new Date(date);
   const dateKey = selectedDate.toISOString().split('T')[0];
 
-  const dayEntries = entries.filter(
-    (e) => new Date(e.date).toISOString().split('T')[0] === dateKey
-  );
+  const dayEntries = entries.filter((e) => {
+  try {
+    if (!e.createdAt) return false;
+    const d = new Date(e.createdAt);
+    if (isNaN(d.getTime())) return false;
+    return d.toISOString().split('T')[0] === dateKey;
+  } catch {
+    return false;
+  }
+});
 
   const formattedDate = selectedDate.toLocaleDateString('en-NZ', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
@@ -104,9 +111,11 @@ export default function DayViewScreen() {
                   {entry.content}
                 </Text>
                 <Text style={styles.entryTime}>
-                  {new Date(entry.date).toLocaleTimeString('en-NZ', {
-                    hour: '2-digit', minute: '2-digit',
-                  })}
+                  {entry.createdAt && !isNaN(new Date(entry.createdAt).getTime())
+                    ? new Date(entry.createdAt).toLocaleTimeString('en-NZ', {
+                      hour: '2-digit', minute: '2-digit',
+                      })
+                    : 'No time'}
                 </Text>
               </TouchableOpacity>
             ))
