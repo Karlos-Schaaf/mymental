@@ -98,9 +98,9 @@ export function useJournalEntries() {
     if (!uid) return;
     try {
       const id = await saveJournalEntry(uid, {
-        title: entry.title,
+        ...(entry.title ? { title: entry.title } : {}),
         body: entry.content,
-        mood: entry.mood,
+        ...(entry.mood ? { mood: entry.mood } : {}),
         createdAt: new Date(entry.createdAt),
       });
       const newEntry: JournalEntry = { ...entry, id };
