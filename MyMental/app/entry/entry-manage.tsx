@@ -1,30 +1,35 @@
+// app/entry/entry-manage.tsx
+// Trello Card #14 - View Journal History (entry detail)
+// Trello Card #7  - Edit a Journal Entry (including mood)
+// Trello Card #2  - Delete a Journal Entry
+
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  SafeAreaView,
-  Alert,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
+  View, Text, StyleSheet, TextInput, TouchableOpacity,
+  SafeAreaView, Alert, ScrollView, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useJournalEntries } from '../../src/hooks/useJournalEntries';
+import { useJournalEntries, getMoodColor, getMoodEmoji, MoodLevel } from '../../src/hooks/useJournalEntries';
 
 const Colors = {
   primary: '#0A9B45',
+  softGreen: '#EAF8EF',
   background: '#FFFFFF',
   border: '#E6E6E6',
   text: '#1E1E1E',
   secondary: '#7A7A7A',
   error: '#E74C3C',
 };
-
 const Spacing = { xs: 4, sm: 8, md: 16, lg: 24 };
-const Radius = { sm: 10, lg: 16 };
+const Radius = { sm: 10, md: 12, lg: 16 };
+
+const MOODS: { level: MoodLevel; emoji: string; label: string }[] = [
+  { level: 'very_bad', emoji: '😞', label: 'Very Bad' },
+  { level: 'bad',      emoji: '😔', label: 'Bad' },
+  { level: 'neutral',  emoji: '😐', label: 'Neutral' },
+  { level: 'good',     emoji: '😊', label: 'Good' },
+  { level: 'great',    emoji: '😁', label: 'Great' },
+];
 
 export default function EntryManageScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -33,41 +38,55 @@ export default function EntryManageScreen() {
 
   const entry = entries.find((e) => e.id === id);
   const [isEditing, setIsEditing] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(entry?.title ?? '');
   const [editedContent, setEditedContent] = useState(entry?.content ?? '');
+  const [editedMood, setEditedMood] = useState<MoodLevel | undefined>(entry?.mood);
 
   if (!entry) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centred}>
           <Text style={styles.errorText}>Entry not found.</Text>
-          <TouchableOpacity onPress={() => router.back()} accessibilityLabel="Go back">
-            <Text style={styles.backButton}>← Back</Text>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Text style={styles.linkText}>Go back</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
   }
 
-  const formattedDate = new Date(entry.createdAt).toLocaleDateString('en-NZ', {
-  weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-});
-  const formattedTime = new Date(entry.createdAt).toLocaleTimeString('en-NZ', {
-  hour: '2-digit', minute: '2-digit',
-});
+  const formattedDate = entry.createdAt && !isNaN(new Date(entry.createdAt).getTime())
+    ? new Date(entry.createdAt).toLocaleDateString('en-NZ', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+      })
+    : 'No date';
 
-  // Trello Card #7 - save edits
+  const formattedTime = entry.createdAt && !isNaN(new Date(entry.createdAt).getTime())
+    ? new Date(entry.createdAt).toLocaleTimeString('en-NZ', {
+        hour: '2-digit', minute: '2-digit',
+      })
+    : 'No time';
+
+  // Trello Card #7 - save edits including mood
   const handleSave = () => {
     if (!editedContent.trim()) {
       Alert.alert('Empty Entry', 'Entry cannot be empty.', [{ text: 'OK' }]);
       return;
     }
     // Acceptance Test: updated content replaces previous version
-    updateEntry({ ...entry, content: editedContent.trim() });
+    updateEntry({
+      ...entry,
+      title: editedTitle.trim() || undefined,
+      content: editedContent.trim(),
+      mood: editedMood,
+    });
     setIsEditing(false);
   };
 
   const handleCancelEdit = () => {
+    setEditedTitle(entry.title ?? '');
     setEditedContent(entry.content);
+    setEditedMood(entry.mood);
     setIsEditing(false);
   };
 
@@ -98,13 +117,11 @@ export default function EntryManageScreen() {
 
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity 
-            onPress={() => {
-              router.dismissAll();
-              router.replace('/(tabs)/journal');
-            }} 
-            accessibilityLabel="Go back to Journal"
->
+          <TouchableOpacity
+            onPress={() => router.back()}
+            accessibilityLabel="Go back"
+            style={styles.headerBtn}
+          >
             <Text style={styles.backButton}>← Back</Text>
           </TouchableOpacity>
 
@@ -120,40 +137,114 @@ export default function EntryManageScreen() {
           ) : (
             <View style={styles.headerActions}>
               {/* Trello Card #7 — Edit */}
-              <TouchableOpacity onPress={() => setIsEditing(true)} style={styles.headerBtn} accessibilityLabel="Edit entry">
+              <TouchableOpacity
+                onPress={() => setIsEditing(true)}
+                style={styles.headerBtn}
+                accessibilityLabel="Edit entry"
+              >
                 <Text style={styles.editText}>Edit</Text>
               </TouchableOpacity>
               {/* Trello Card #2 — Delete */}
-              <TouchableOpacity onPress={handleDelete} style={styles.headerBtn} accessibilityLabel="Delete entry">
+              <TouchableOpacity
+                onPress={handleDelete}
+                style={styles.headerBtn}
+                accessibilityLabel="Delete entry"
+              >
                 <Text style={styles.deleteText}>Delete</Text>
               </TouchableOpacity>
             </View>
           )}
         </View>
 
-        {/* Date & Time */}
-        <View style={styles.dateBadge}>
-          <Text style={styles.dateText}>{formattedDate}</Text>
-          <Text style={styles.timeText}>{formattedTime}</Text>
-        </View>
+        <ScrollView
+          style={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Date & Time */}
+          <View style={styles.dateBadge}>
+            <Text style={styles.dateText}>{formattedDate}</Text>
+            <Text style={styles.timeText}>{formattedTime}</Text>
+          </View>
 
-        {/* Entry Content — Trello Card #14: full entry displayed */}
-        <ScrollView style={styles.contentContainer} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-          {isEditing ? (
-            // Trello Card #7: existing content becomes editable
-            <TextInput
-              style={styles.editInput}
-              value={editedContent}
-              onChangeText={setEditedContent}
-              multiline
-              autoFocus
-              textAlignVertical="top"
-              maxLength={1000}
-              accessibilityLabel="Edit journal entry"
-            />
-          ) : (
-            <Text style={styles.entryContent}>{entry.content}</Text>
-          )}
+          {/* Mood Display / Edit */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Mood</Text>
+            {isEditing ? (
+              // Editable mood selector
+              <View style={styles.moodRow}>
+                {MOODS.map(({ level, emoji, label }) => (
+                  <TouchableOpacity
+                    key={level}
+                    style={[
+                      styles.moodBtn,
+                      editedMood === level && styles.moodBtnSelected,
+                    ]}
+                    onPress={() => setEditedMood(level)}
+                    accessibilityLabel={`Mood: ${label}`}
+                  >
+                    <Text style={styles.moodEmoji}>{emoji}</Text>
+                    <Text style={[
+                      styles.moodLabel,
+                      editedMood === level && styles.moodLabelSelected,
+                    ]}>{label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : (
+              // Mood display
+              entry.mood ? (
+                <View style={[styles.moodBadge, { backgroundColor: getMoodColor(entry.mood) }]}>
+                  <Text style={styles.moodBadgeEmoji}>{getMoodEmoji(entry.mood)}</Text>
+                  <Text style={styles.moodBadgeText}>
+                    {MOODS.find(m => m.level === entry.mood)?.label ?? entry.mood}
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.noMood}>
+                  <Text style={styles.noMoodText}>No mood recorded</Text>
+                </View>
+              )
+            )}
+          </View>
+
+          {/* Entry Content */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Entry</Text>
+            {isEditing ? (
+              <View style={styles.inputBox}>
+                <TextInput
+                  style={styles.titleInput}
+                  value={editedTitle}
+                  onChangeText={setEditedTitle}
+                  placeholder="Entry title..."
+                  placeholderTextColor={Colors.secondary}
+                  maxLength={80}
+                  accessibilityLabel="Edit entry title"
+                />
+                <View style={styles.divider} />
+                <TextInput
+                  style={styles.contentInput}
+                  value={editedContent}
+                  onChangeText={setEditedContent}
+                  multiline
+                  autoFocus
+                  textAlignVertical="top"
+                  maxLength={1000}
+                  accessibilityLabel="Edit journal entry content"
+                />
+              </View>
+            ) : (
+              <View style={styles.contentDisplay}>
+                {entry.title ? (
+                  <Text style={styles.displayTitle}>{entry.title}</Text>
+                ) : null}
+                <Text style={styles.displayContent}>{entry.content}</Text>
+              </View>
+            )}
+          </View>
+
+          <View style={{ height: 40 }} />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -161,7 +252,8 @@ export default function EntryManageScreen() {
 }
 
 const styles = StyleSheet.create({
-  container:        { flex: 1, backgroundColor: Colors.background },
+  container:      { flex: 1, backgroundColor: Colors.background },
+  scroll:         { flex: 1 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -171,20 +263,73 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  backButton:       { fontSize: 15, color: Colors.secondary },
-  headerActions:    { flexDirection: 'row', gap: Spacing.md },
-  headerBtn:        { minWidth: 44, minHeight: 44, justifyContent: 'center', alignItems: 'center' },
-  editText:         { fontSize: 15, fontWeight: '600', color: Colors.primary },
-  deleteText:       { fontSize: 15, fontWeight: '600', color: Colors.error },
-  saveText:         { fontSize: 15, fontWeight: '600', color: Colors.primary },
-  cancelText:       { fontSize: 15, color: Colors.secondary },
-  dateBadge:        { paddingHorizontal: Spacing.lg, paddingTop: Spacing.md, paddingBottom: Spacing.sm },
-  dateText:         { fontSize: 16, fontWeight: '600', color: Colors.text },
-  timeText:         { fontSize: 13, color: Colors.secondary, marginTop: Spacing.xs },
-  contentContainer: { flex: 1, paddingHorizontal: Spacing.lg, paddingTop: Spacing.md },
-  entryContent:     { fontSize: 15, color: Colors.text, lineHeight: 26 },
-  editInput:        { fontSize: 15, color: Colors.text, lineHeight: 26, minHeight: 300 },
-  centred:          { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  errorText:        { fontSize: 16, color: Colors.secondary, marginBottom: Spacing.md },
-  linkText:         { fontSize: 15, color: Colors.primary },
+  headerBtn:      { minWidth: 44, minHeight: 44, justifyContent: 'center' },
+  headerActions:  { flexDirection: 'row', gap: Spacing.md },
+  backButton:     { fontSize: 15, color: Colors.secondary },
+  editText:       { fontSize: 15, fontWeight: '600', color: Colors.primary },
+  deleteText:     { fontSize: 15, fontWeight: '600', color: Colors.error },
+  saveText:       { fontSize: 15, fontWeight: '600', color: Colors.primary },
+  cancelText:     { fontSize: 15, color: Colors.secondary },
+  dateBadge:      { paddingHorizontal: Spacing.lg, paddingTop: Spacing.md, paddingBottom: Spacing.sm },
+  dateText:       { fontSize: 16, fontWeight: '600', color: Colors.text },
+  timeText:       { fontSize: 13, color: Colors.secondary, marginTop: Spacing.xs },
+  section:        { paddingHorizontal: Spacing.lg, paddingTop: Spacing.md },
+  sectionLabel:   { fontSize: 14, fontWeight: '600', color: Colors.secondary, marginBottom: Spacing.sm, textTransform: 'uppercase', letterSpacing: 0.5 },
+
+  // Mood display
+  moodRow:        { flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.md },
+  moodBtn: {
+    alignItems: 'center',
+    padding: Spacing.sm,
+    borderRadius: Radius.md,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    minWidth: 44,
+    minHeight: 44,
+  },
+  moodBtnSelected: { borderColor: Colors.primary, backgroundColor: Colors.softGreen },
+  moodEmoji:      { fontSize: 24, marginBottom: 2 },
+  moodLabel:      { fontSize: 10, color: Colors.secondary, textAlign: 'center' },
+  moodLabelSelected: { color: Colors.primary, fontWeight: '600' },
+  moodBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.md,
+    borderRadius: Radius.lg,
+    gap: Spacing.sm,
+    alignSelf: 'flex-start',
+  },
+  moodBadgeEmoji: { fontSize: 24 },
+  moodBadgeText:  { fontSize: 15, fontWeight: '600', color: Colors.text },
+  noMood: {
+    padding: Spacing.md,
+    backgroundColor: Colors.softGreen,
+    borderRadius: Radius.lg,
+    alignSelf: 'flex-start',
+  },
+  noMoodText:     { fontSize: 14, color: Colors.secondary },
+
+  // Entry content
+  inputBox: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.sm,
+    padding: Spacing.md,
+  },
+  titleInput: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+    paddingVertical: Spacing.sm,
+    minHeight: 44,
+  },
+  divider:        { height: 1, backgroundColor: Colors.border, marginVertical: Spacing.sm },
+  contentInput:   { fontSize: 15, color: Colors.text, lineHeight: 24, minHeight: 200 },
+  contentDisplay: { paddingTop: Spacing.xs },
+  displayTitle:   { fontSize: 18, fontWeight: '700', color: Colors.text, marginBottom: Spacing.sm },
+  displayContent: { fontSize: 15, color: Colors.text, lineHeight: 26 },
+
+  centred:        { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  errorText:      { fontSize: 16, color: Colors.secondary, marginBottom: Spacing.md },
+  linkText:       { fontSize: 15, color: Colors.primary },
 });

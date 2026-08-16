@@ -1,6 +1,10 @@
+// src/components/MoodCalendar.tsx
+// Monthly calendar grid — days show up to 3 coloured dots based on mood
+// Tapping a day opens day-view with that day's entries
+
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { getMoodColor, getMoodEmoji, MoodLevel } from '../hooks/useJournalEntries';
+import { getMoodColor, MoodLevel } from '../hooks/useJournalEntries';
 
 const Colors = {
   primary: '#0A9B45',
@@ -12,58 +16,45 @@ const Colors = {
 };
 
 const Spacing = { xs: 4, sm: 8, md: 16, lg: 24 };
-const Radius = { sm: 10, lg: 16 };
+const Radius = { lg: 16 };
 
 export type JournalEntry = {
   id: string;
   content: string;
   createdAt: string;
   mood?: MoodLevel;
-};
-
-export type MoodEntry = {
-  createdAt: string;
-  mood: MoodLevel;
+  title?: string;
 };
 
 type Props = {
   entries: JournalEntry[];
-  moodEntries?: MoodEntry[];
   onDayPress: (date: string) => void;
 };
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-export default function MoodCalendar({ entries, moodEntries = [], onDayPress }: Props) {
+export default function MoodCalendar({ entries, onDayPress }: Props) {
   const today = new Date();
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
 
   const monthLabel = new Date(currentYear, currentMonth).toLocaleDateString('en-NZ', {
-    month: 'long',
-    year: 'numeric',
+    month: 'long', year: 'numeric',
   });
 
   const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
 
-  const moodMap: Record<string, MoodLevel> = {};
-
-  moodEntries.forEach((m) => {
-    const key = toDateKey(m.createdAt);
-    if (key) moodMap[key] = m.mood;
-  });
+  // Build map: dateKey → array of moods (up to 3)
+  const dayMoodsMap: Record<string, MoodLevel[]> = {};
 
   entries.forEach((e) => {
     const key = toDateKey(e.createdAt);
-    if (key && e.mood) moodMap[key] = e.mood;
-  });
-
-  // Mark days that have entries even without mood
-  const entryDays: Record<string, boolean> = {};
-  entries.forEach((e) => {
-    const key = toDateKey(e.createdAt);
-    if (key) entryDays[key] = true;
+    if (!key) return;
+    if (!dayMoodsMap[key]) dayMoodsMap[key] = [];
+    if (dayMoodsMap[key].length < 3) {
+      dayMoodsMap[key].push(e.mood ?? 'neutral');
+    }
   });
 
   const goToPrev = () => {
@@ -83,29 +74,33 @@ export default function MoodCalendar({ entries, moodEntries = [], onDayPress }: 
 
   return (
     <View style={styles.container}>
+
+      {/* Month Navigation */}
       <View style={styles.navRow}>
-        <TouchableOpacity onPress={goToPrev} style={styles.navBtn}>
+        <TouchableOpacity onPress={goToPrev} style={styles.navBtn} accessibilityLabel="Previous month">
           <Text style={styles.navArrow}>‹</Text>
         </TouchableOpacity>
         <Text style={styles.monthLabel}>{monthLabel}</Text>
-        <TouchableOpacity onPress={goToNext} style={styles.navBtn}>
+        <TouchableOpacity onPress={goToNext} style={styles.navBtn} accessibilityLabel="Next month">
           <Text style={styles.navArrow}>›</Text>
         </TouchableOpacity>
       </View>
 
+      {/* Day Labels */}
       <View style={styles.dayLabelsRow}>
         {DAYS.map((d) => (
           <Text key={d} style={styles.dayLabel}>{d}</Text>
         ))}
       </View>
 
+      {/* Calendar Grid */}
       <View style={styles.grid}>
         {cells.map((day, index) => {
           if (day === null) return <View key={`blank-${index}`} style={styles.cell} />;
 
           const dateStr = toDateKey(new Date(currentYear, currentMonth, day).toISOString());
-          const mood = moodMap[dateStr];
-          const hasEntry = entryDays[dateStr];
+          const moods = dayMoodsMap[dateStr] ?? [];
+          const hasEntries = moods.length > 0;
           const isToday =
             day === today.getDate() &&
             currentMonth === today.getMonth() &&
@@ -114,22 +109,28 @@ export default function MoodCalendar({ entries, moodEntries = [], onDayPress }: 
           return (
             <TouchableOpacity
               key={day}
-              style={[
-                styles.cell,
-                hasEntry && !mood && { backgroundColor: '#E6E6E6' },
-                mood && { backgroundColor: getMoodColor(mood) },
-                isToday && styles.todayCell,
-              ]}
+              style={[styles.cell, isToday && styles.todayCell]}
               onPress={() => onDayPress(new Date(currentYear, currentMonth, day).toISOString())}
+              accessibilityLabel={`${day} ${monthLabel}${hasEntries ? `, ${moods.length} entr${moods.length === 1 ? 'y' : 'ies'}` : ''}`}
             >
               <Text style={[styles.dayNumber, isToday && styles.todayText]}>{day}</Text>
-              {mood && <Text style={styles.moodDot}>{getMoodEmoji(mood)}</Text>}
-              {hasEntry && !mood && <Text style={styles.moodDot}>📝</Text>}
+              {/* Mood dots — up to 3 */}
+              {hasEntries && (
+                <View style={styles.dotsRow}>
+                  {moods.map((mood, i) => (
+                    <View
+                      key={i}
+                      style={[styles.dot, { backgroundColor: getMoodColor(mood) }]}
+                    />
+                  ))}
+                </View>
+              )}
             </TouchableOpacity>
           );
         })}
       </View>
 
+      {/* Legend */}
       <View style={styles.legend}>
         {[
           { mood: 'very_bad' as MoodLevel, label: 'Very Bad' },
@@ -180,16 +181,17 @@ const styles = StyleSheet.create({
   grid:         { flexDirection: 'row', flexWrap: 'wrap' },
   cell: {
     width: '14.28%',
-    aspectRatio: 1,
+    aspectRatio: 0.8,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 4,
     borderRadius: 8,
-    padding: 2,
   },
-  todayCell:    { borderWidth: 2, borderColor: Colors.primary },
+  todayCell:    { backgroundColor: Colors.softGreen },
   dayNumber:    { fontSize: 13, color: Colors.text },
   todayText:    { fontWeight: 'bold', color: Colors.primary },
-  moodDot:      { fontSize: 10, marginTop: 1 },
+  dotsRow:      { flexDirection: 'row', gap: 2, marginTop: 2, flexWrap: 'wrap', justifyContent: 'center' },
+  dot:          { width: 6, height: 6, borderRadius: 3 },
   legend:       { flexDirection: 'row', justifyContent: 'space-between', marginTop: Spacing.md, flexWrap: 'wrap', gap: Spacing.xs },
   legendItem:   { flexDirection: 'row', alignItems: 'center', gap: 4 },
   legendDot:    { width: 10, height: 10, borderRadius: 5 },
