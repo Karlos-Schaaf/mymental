@@ -40,13 +40,12 @@ function TabIcon({
   );
 }
 
-
 export default function TabsLayout() {
   return (
     <SafeAreaView
-  style={{ flex: 1, backgroundColor: colors.white }}
-  edges={["bottom"]}
->
+      style={{ flex: 1, backgroundColor: colors.white }}
+      edges={["bottom"]}
+    >
       <Tabs
         screenOptions={{
           headerShown: false,
@@ -131,13 +130,12 @@ export default function TabsLayout() {
   );
 }
 
-
 const styles = StyleSheet.create({
   tabBar: {
     backgroundColor: colors.white,
     borderTopColor: colors.border,
     borderTopWidth: 1,
-    height: 55, // Increased height to accommodate multi-line text
+    height: 55,
     paddingTop: 20,
     paddingBottom: 0,
   },
@@ -148,7 +146,7 @@ const styles = StyleSheet.create({
     width: "100%",
     flex: 1,
     minWidth: 200,
-    },
+  },
 
   tabLabel: {
     fontFamily: fonts.sans,
