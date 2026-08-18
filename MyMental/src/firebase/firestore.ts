@@ -1,7 +1,3 @@
-// src/firebase/firestore.ts
-// Firestore functions for journal entries and user documents
-// Journal entries are stored under users/{uid}/entries/{entryId}
-
 import {
   collection,
   addDoc,

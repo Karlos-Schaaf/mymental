@@ -52,6 +52,7 @@ export default function NewJournalScreen() {
       title: title.trim() || undefined,
       content: content.trim(),
       createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
     });
 
     router.back();
