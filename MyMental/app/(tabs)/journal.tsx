@@ -40,7 +40,7 @@ export default function JournalHomeScreen() {
   const [content, setContent] = useState('');
 
   const sortedEntries = [...entries].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
   );
   const recentEntries = sortedEntries.slice(0, 3);
 
@@ -58,6 +58,7 @@ export default function JournalHomeScreen() {
       content: content.trim(),
       mood: selectedMood,
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     });
     setTitle('');
     setContent('');

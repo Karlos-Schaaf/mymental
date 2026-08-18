@@ -43,6 +43,7 @@ export async function saveJournalEntry(
       createdAt: Timestamp.fromDate(
         entry.createdAt instanceof Date ? entry.createdAt : new Date()
       ),
+      updatedAt: new Date(),
     }
   );
   return ref.id;
@@ -67,7 +68,10 @@ export async function updateJournalEntry(
   entryId: string,
   updates: Partial<Omit<FirestoreJournalEntry, "id">>
 ) {
-  await updateDoc(doc(db, "users", uid, "entries", entryId), updates);
+  await updateDoc(doc(db, "users", uid, "entries", entryId), {
+    ...updates,
+    updatedAt: new Date(),
+  });
 }
 
 // Delete a journal entry

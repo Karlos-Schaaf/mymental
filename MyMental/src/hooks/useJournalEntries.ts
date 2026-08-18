@@ -1,8 +1,6 @@
 // src/hooks/useJournalEntries.ts
-// Journal entries hook — reads and writes to Firebase Firestore
-// Entries are stored under users/{uid}/entries/ and tied to the logged-in user
-
 import { useState, useEffect, useCallback } from 'react';
+import { create } from 'zustand';
 import { auth } from '../firebase/auth';
 import {
   saveJournalEntry,
@@ -18,9 +16,10 @@ export type MoodLevel = 'very_bad' | 'bad' | 'neutral' | 'good' | 'great';
 export type JournalEntry = {
   id: string;
   title?: string;
-  content: string;   // maps to Firestore "body"
+  content: string;
   mood?: MoodLevel;
-  createdAt: string; // ISO string for UI use
+  createdAt: string;
+  updatedAt: string;
 };
 
 // Mood helpers
@@ -46,7 +45,6 @@ export function getMoodEmoji(mood?: string): string {
   }
 }
 
-// Convert Firestore entry to local JournalEntry shape
 function fromFirestore(doc: FirestoreJournalEntry): JournalEntry {
   const createdAt =
     doc.createdAt instanceof Timestamp
@@ -55,28 +53,49 @@ function fromFirestore(doc: FirestoreJournalEntry): JournalEntry {
       ? doc.createdAt.toISOString()
       : new Date().toISOString();
 
-  return {
+    return {
     id: doc.id ?? Date.now().toString(),
     title: doc.title,
     content: doc.body,
     mood: doc.mood as MoodLevel | undefined,
     createdAt,
+    updatedAt: createdAt,
   };
 }
 
+// Shared Zustand store — all screens read from the same entries list
+type JournalStore = {
+  entries: JournalEntry[];
+  setEntries: (entries: JournalEntry[]) => void;
+  upsertEntry: (entry: JournalEntry) => void;
+  removeEntry: (id: string) => void;
+};
+
+const useJournalStore = create<JournalStore>((set) => ({
+  entries: [],
+  setEntries: (entries) => set({ entries }),
+  upsertEntry: (entry) =>
+    set((state) => {
+      const exists = state.entries.find((e) => e.id === entry.id);
+      if (exists) {
+        return { entries: state.entries.map((e) => (e.id === entry.id ? entry : e)) };
+      }
+      return { entries: [entry, ...state.entries] };
+    }),
+  removeEntry: (id) =>
+    set((state) => ({ entries: state.entries.filter((e) => e.id !== id) })),
+}));
+
+// Hook used by all journal screens
 export function useJournalEntries() {
-  const [entries, setEntries] = useState<JournalEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { entries, setEntries, upsertEntry, removeEntry } = useJournalStore();
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const uid = auth.currentUser?.uid;
 
-  // Load entries from Firestore on mount
   const loadEntries = useCallback(async () => {
-    if (!uid) {
-      setLoading(false);
-      return;
-    }
+    if (!uid) return;
     try {
       setLoading(true);
       const docs = await getJournalEntries(uid);
@@ -90,10 +109,9 @@ export function useJournalEntries() {
   }, [uid]);
 
   useEffect(() => {
-    loadEntries();
-  }, [loadEntries]);
+    if (entries.length === 0) loadEntries();
+  }, []);
 
-  // Add a new entry — saves to Firestore and updates local state
   const addEntry = async (entry: Omit<JournalEntry, 'id'>) => {
     if (!uid) return;
     try {
@@ -103,15 +121,14 @@ export function useJournalEntries() {
         ...(entry.mood ? { mood: entry.mood } : {}),
         createdAt: new Date(entry.createdAt),
       });
-      const newEntry: JournalEntry = { ...entry, id };
-      setEntries((prev) => [newEntry, ...prev]);
+      const newEntry: JournalEntry = { ...entry, id, updatedAt: new Date().toISOString() };
+      upsertEntry(newEntry);
     } catch (e) {
       setError('Failed to save entry.');
       console.error('useJournalEntries addEntry error:', e);
     }
   };
 
-  // Update an existing entry — saves to Firestore and updates local state
   const updateEntry = async (updated: JournalEntry) => {
     if (!uid) return;
     try {
@@ -120,21 +137,18 @@ export function useJournalEntries() {
         body: updated.content,
         mood: updated.mood,
       });
-      setEntries((prev) =>
-        prev.map((e) => (e.id === updated.id ? updated : e))
-      );
+      upsertEntry({ ...updated, updatedAt: new Date().toISOString() });
     } catch (e) {
       setError('Failed to update entry.');
       console.error('useJournalEntries updateEntry error:', e);
     }
   };
 
-  // Delete an entry — removes from Firestore and updates local state
   const deleteEntry = async (id: string) => {
     if (!uid) return;
     try {
       await deleteJournalEntry(uid, id);
-      setEntries((prev) => prev.filter((e) => e.id !== id));
+      removeEntry(id);
     } catch (e) {
       setError('Failed to delete entry.');
       console.error('useJournalEntries deleteEntry error:', e);
