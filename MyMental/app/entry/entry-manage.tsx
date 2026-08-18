@@ -3,7 +3,7 @@
 // Trello Card #7  - Edit a Journal Entry (including mood)
 // Trello Card #2  - Delete a Journal Entry
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
   SafeAreaView, Alert, ScrollView, KeyboardAvoidingView, Platform,
@@ -41,6 +41,14 @@ export default function EntryManageScreen() {
   const [editedTitle, setEditedTitle] = useState(entry?.title ?? '');
   const [editedContent, setEditedContent] = useState(entry?.content ?? '');
   const [editedMood, setEditedMood] = useState<MoodLevel | undefined>(entry?.mood);
+
+useEffect(() => {
+  if (entry) {
+    setEditedTitle(entry.title ?? '');
+    setEditedContent(entry.content);
+    setEditedMood(entry.mood);
+  }
+}, [entry]);
 
   if (!entry) {
     return (
