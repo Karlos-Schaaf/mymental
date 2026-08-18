@@ -7,7 +7,7 @@ export type MoodLevel = 'very_bad' | 'bad' | 'neutral' | 'good' | 'great';
 export interface JournalEntry {
   id: string;
   content: string;
-  date: string;          // ISO string
+  createdAt: string;     // ISO string
   mood?: MoodLevel;      // optional until mood feature is ready
   title?: string;        // optional – can be derived later
 }
