@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useJournalEntries } from '../../src/hooks/useJournalEntries';
 import {
   View, Text, StyleSheet, SafeAreaView,
   ScrollView, TouchableOpacity, ActivityIndicator, Dimensions,
@@ -69,28 +70,20 @@ export default function InsightsScreen() {
   const [filter, setFilter] = useState<TimeFilter>('week');
   const uid = auth.currentUser?.uid;
 
-  const loadEntries = useCallback(async () => {
-    if (!uid) { setLoading(false); return; }
-    try {
-      setLoading(true);
-      const docs = await getJournalEntries(uid);
-      setEntries(
-        docs.filter((d) => d.mood).map((d) => ({
-          id: d.id ?? '',
-          mood: d.mood,
-          createdAt:
-            d.createdAt instanceof Timestamp ? d.createdAt.toDate() :
-            d.createdAt instanceof Date ? d.createdAt : new Date(),
-        }))
-      );
-    } catch (e) {
-      console.error('InsightsScreen load error:', e);
-    } finally {
-      setLoading(false);
-    }
-  }, [uid]);
+  const { entries: journalEntries } = useJournalEntries();
 
-  useEffect(() => { loadEntries(); }, [loadEntries]);
+  useEffect(() => {
+    setEntries(
+      journalEntries
+        .filter((e) => e.mood)
+        .map((e) => ({
+          id: e.id,
+          mood: e.mood,
+          createdAt: new Date(e.createdAt),
+      }))
+  );
+  setLoading(false);
+}, [journalEntries]);
 
   const startDate = getStartDate(filter);
   const filtered = entries.filter((e) => e.createdAt >= startDate);
