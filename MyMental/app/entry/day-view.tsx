@@ -1,7 +1,3 @@
-// app/entry/day-view.tsx
-// Shows all entries for a selected day
-// Allows adding a new entry for past dates (not future dates)
-
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,

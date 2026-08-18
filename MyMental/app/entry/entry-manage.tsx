@@ -1,8 +1,3 @@
-// app/entry/entry-manage.tsx
-// Trello Card #14 - View Journal History (entry detail)
-// Trello Card #7  - Edit a Journal Entry (including mood)
-// Trello Card #2  - Delete a Journal Entry
-
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,

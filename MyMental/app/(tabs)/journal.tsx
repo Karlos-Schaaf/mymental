@@ -1,7 +1,3 @@
-// app/(tabs)/journal.tsx
-// Trello Card #19 - View Journal Home
-// Inline mood selector + journal entry creation, recent entries list, mood calendar
-
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
