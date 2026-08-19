@@ -180,7 +180,7 @@ export default function JournalHomeScreen() {
           <MoodCalendar
             entries={entries}
             onDayPress={(date) =>
-              router.push({ pathname: '/entry/day-view', params: { date } })
+              router.push({ pathname: '/entry/day-view' as any, params: { date } })
             }
           />
 
