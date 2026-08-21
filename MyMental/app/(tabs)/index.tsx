@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -12,46 +12,35 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import type { Timestamp } from 'firebase/firestore';
 
 import { colors, fonts, spacing, radius } from '../../src/constants/theme';
 import { scoreForMood } from '../../src/constants/moodScore';
 import { auth } from '../../src/firebase/auth';
-import { Entry } from '../../src/types/entry';
-import { useJournalEntries } from '../../src/hooks/useJournalEntries';
+import {
+  useJournalEntries,
+  JournalEntry,
+} from '../../src/hooks/useJournalEntries';
 import MoodRing from '../../src/components/MoodRing';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-
-function toDate(value: Timestamp | Date): Date {
-  return value instanceof Date ? value : value.toDate();
-}
 
 function average(values: number[]): number | null {
   if (values.length === 0) return null;
   return values.reduce((sum, v) => sum + v, 0) / values.length;
 }
 
-function stressBucket(value: number) {
-  if (value <= 3) return { label: 'Low', color: colors.teal };
-  if (value <= 6) return { label: 'Moderate', color: colors.amber };
-  return { label: 'High', color: colors.coral };
-}
-
-function useDashboardStats(entries: Entry[] | null) {
+function useDashboardStats(entries: JournalEntry[]) {
   return useMemo(() => {
-    if (!entries) return null;
-
     const now = Date.now();
     const thisWeek = entries.filter(
-      (e) => now - toDate(e.createdAt).getTime() <= 7 * DAY_MS,
+      (e) => now - new Date(e.createdAt).getTime() <= 7 * DAY_MS,
     );
     const lastWeek = entries.filter((e) => {
-      const diff = now - toDate(e.createdAt).getTime();
+      const diff = now - new Date(e.createdAt).getTime();
       return diff > 7 * DAY_MS && diff <= 14 * DAY_MS;
     });
 
-    const moodScores = (list: Entry[]) =>
+    const moodScores = (list: JournalEntry[]) =>
       list
         .map((e) => scoreForMood(e.mood))
         .filter((s): s is number => s !== null);
@@ -67,20 +56,11 @@ function useDashboardStats(entries: Entry[] | null) {
       moodTrend = diff > 0.3 ? 'up' : diff < -0.3 ? 'down' : 'flat';
     }
 
-    const stressValues = (list: Entry[]) =>
-      list
-        .map((e) => e.stress)
-        .filter((s): s is number => typeof s === 'number');
-
-    const stressValue =
-      average(stressValues(thisWeek)) ?? average(stressValues(entries));
-
     return {
       hasAnyEntries: entries.length > 0,
       displayedMood,
       moodTrend,
       checkins: thisWeek.length,
-      stressValue,
     };
   }, [entries]);
 }
@@ -89,9 +69,26 @@ export default function HomeScreen() {
   const user = auth.currentUser;
   const firstName = (user?.displayName ?? 'there').split(' ')[0];
 
-  const { entries, loading, refreshing, error, refresh } =
-    useJournalEntries();
+  const { entries, loading, error, refresh } = useJournalEntries();
   const stats = useDashboardStats(entries);
+
+  // The hook doesn't distinguish "first load" from "pull-to-refresh" — both
+  // just flip `loading` true. We track that split locally so a refresh
+  // spins the pull indicator instead of blanking the whole dashboard.
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    if (!loading) setHasLoadedOnce(true);
+  }, [loading]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refresh();
+    setRefreshing(false);
+  };
+
+  const showFullScreenLoader = loading && !hasLoadedOnce;
 
   const hour = new Date().getHours();
   const timeGreeting =
@@ -103,7 +100,7 @@ export default function HomeScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={refresh} />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
       >
         {/* Header */}
@@ -132,12 +129,12 @@ export default function HomeScreen() {
         {/* Greeting */}
         <View style={styles.greetingBlock}>
           <Text style={styles.greeting}>
-            Good {timeGreeting}, {firstName} 
+            Good {timeGreeting}, {firstName} 👋
           </Text>
           <Text style={styles.greetingSubtitle}>How are you feeling today?</Text>
         </View>
 
-        {loading ? (
+        {showFullScreenLoader ? (
           <View style={styles.loadingBlock}>
             <ActivityIndicator color={colors.teal} />
           </View>
@@ -163,12 +160,12 @@ export default function HomeScreen() {
                 </View>
 
                 <Text style={styles.moodValue}>
-                  {stats?.displayedMood !== null && stats?.displayedMood !== undefined
+                  {stats.displayedMood !== null
                     ? `${stats.displayedMood.toFixed(1)}/10`
                     : '—'}
                 </Text>
 
-                {stats?.hasAnyEntries ? (
+                {stats.hasAnyEntries ? (
                   stats.moodTrend ? (
                     <View style={styles.trendRow}>
                       <Ionicons
@@ -221,7 +218,7 @@ export default function HomeScreen() {
               </View>
 
               <MoodRing
-                value={stats?.hasAnyEntries ? stats.displayedMood : null}
+                value={stats.hasAnyEntries ? stats.displayedMood : null}
               />
             </View>
 
@@ -231,37 +228,17 @@ export default function HomeScreen() {
                 <Ionicons
                   name="trending-down"
                   size={18}
-                  color={
-                    stats?.stressValue != null
-                      ? stressBucket(stats.stressValue).color
-                      : colors.mutedLight
-                  }
+                  color={colors.mutedLight}
                 />
                 <Text style={styles.cardLabel}>Stress Level</Text>
-                <Text style={styles.statValue}>
-                  {stats?.stressValue != null
-                    ? `${stats.stressValue.toFixed(1)}/10`
-                    : '—'}
-                </Text>
-                <Text
-                  style={[
-                    styles.statSubtitle,
-                    stats?.stressValue != null && {
-                      color: stressBucket(stats.stressValue).color,
-                      fontFamily: fonts.sansMedium,
-                    },
-                  ]}
-                >
-                  {stats?.stressValue != null
-                    ? stressBucket(stats.stressValue).label
-                    : 'Not tracked yet'}
-                </Text>
+                <Text style={styles.statValue}>—</Text>
+                <Text style={styles.statSubtitle}>Not tracked yet</Text>
               </View>
 
               <View style={styles.statCard}>
                 <Ionicons name="calendar-outline" size={18} color={colors.teal} />
                 <Text style={styles.cardLabel}>Check-ins</Text>
-                <Text style={styles.statValue}>{stats?.checkins ?? 0}</Text>
+                <Text style={styles.statValue}>{stats.checkins}</Text>
                 <Text style={styles.statSubtitle}>This week</Text>
               </View>
             </View>
@@ -273,7 +250,7 @@ export default function HomeScreen() {
           <View style={styles.reflectionLeft}>
             <Text style={styles.reflectionTitle}>Daily Reflection</Text>
             <Text style={styles.reflectionSubtitle}>
-              {stats?.hasAnyEntries
+              {stats.hasAnyEntries
                 ? 'Take a moment for yourself.'
                 : 'Write your first entry to get started.'}
             </Text>

@@ -1,94 +1,147 @@
-import { useCallback, useEffect, useState } from 'react';
-import { FirestoreError } from 'firebase/firestore';
+// src/hooks/useJournalEntries.ts
+// Journal entries hook — reads and writes to Firebase Firestore
+// Entries are stored under users/{uid}/entries/ and tied to the logged-in user
 
+import { useState, useEffect, useCallback } from 'react';
 import { auth } from '../firebase/auth';
-import { getUserEntries } from '../firebase/firestore';
-import { Entry } from '../types/entry';
+import {
+  saveJournalEntry,
+  getJournalEntries,
+  updateJournalEntry,
+  deleteJournalEntry,
+  FirestoreJournalEntry,
+} from '../firebase/firestore';
+import { Timestamp } from 'firebase/firestore';
 
-export type JournalEntriesState = {
-  /** null while the first load is in flight; [] once loaded with no data */
-  entries: Entry[] | null;
-  loading: boolean;
-  refreshing: boolean;
-  /** Human-readable message when the hook is NOT operational, else null */
-  error: string | null;
-  refresh: () => Promise<void>;
+export type MoodLevel = 'very_bad' | 'bad' | 'neutral' | 'good' | 'great';
+
+export type JournalEntry = {
+  id: string;
+  title?: string;
+  content: string;   // maps to Firestore "body"
+  mood?: MoodLevel;
+  createdAt: string; // ISO string for UI use
 };
 
-function messageForError(err: unknown): string {
-  const code = (err as FirestoreError)?.code;
-
-  switch (code) {
-    case 'permission-denied':
-      // Firestore rules rejected the read — usually a rules bug or a
-      // userId mismatch on the entry documents.
-      return "You don't have permission to view these entries.";
-    case 'failed-precondition':
-      // Almost always a missing composite index for
-      // where("userId","==",uid) + orderBy("createdAt","desc").
-      // Firestore's own error includes a console link to create it.
-      return 'This feature needs a one-time setup on the backend. Check the console for a Firestore index link, then try again.';
-    case 'unavailable':
-    case 'deadline-exceeded':
-      return "Couldn't reach the server. Check your connection and try again.";
-    case 'unauthenticated':
-      return 'Your session expired. Please log in again.';
-    default:
-      return "Couldn't load your journal entries. Please try again.";
+// Mood helpers
+export function getMoodColor(mood?: string): string {
+  switch (mood as MoodLevel) {
+    case 'very_bad': return '#F1948A';
+    case 'bad':      return '#F0B27A';
+    case 'neutral':  return '#F9E79F';
+    case 'good':     return '#A9DFBF';
+    case 'great':    return '#0A9B45';
+    default:         return '#EAF8EF';
   }
 }
 
-export function useJournalEntries(max = 60): JournalEntriesState {
-  const [entries, setEntries] = useState<Entry[] | null>(null);
+export function getMoodEmoji(mood?: string): string {
+  switch (mood as MoodLevel) {
+    case 'very_bad': return '😞';
+    case 'bad':      return '😔';
+    case 'neutral':  return '😐';
+    case 'good':     return '😊';
+    case 'great':    return '😁';
+    default:         return '📝';
+  }
+}
+
+// Convert Firestore entry to local JournalEntry shape
+function fromFirestore(doc: FirestoreJournalEntry): JournalEntry {
+  const createdAt =
+    doc.createdAt instanceof Timestamp
+      ? doc.createdAt.toDate().toISOString()
+      : doc.createdAt instanceof Date
+      ? doc.createdAt.toISOString()
+      : new Date().toISOString();
+
+  return {
+    id: doc.id ?? Date.now().toString(),
+    title: doc.title,
+    content: doc.body,
+    mood: doc.mood as MoodLevel | undefined,
+    createdAt,
+  };
+}
+
+export function useJournalEntries() {
+  const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchEntries = useCallback(
-    async (isRefresh: boolean) => {
-      const user = auth.currentUser;
+  const uid = auth.currentUser?.uid;
 
-      // NOT OPERATIONAL: no signed-in user. This can happen briefly during
-      // sign-out (the screen may still be mounted for a frame) or if this
-      // hook is ever used outside an authenticated route.
-      if (!user) {
-        setEntries(null);
-        setError('You need to be signed in to see your journal entries.');
-        setLoading(false);
-        setRefreshing(false);
-        return;
-      }
-
-      try {
-        setError(null);
-        const data = await getUserEntries(user.uid, max);
-        setEntries(data);
-      } catch (err) {
-        // NOT OPERATIONAL: the query itself failed. Keep any entries we
-        // already had (e.g. a failed pull-to-refresh shouldn't blank the
-        // screen), and surface a specific message where we can.
-        console.error('useJournalEntries failed:', err);
-        if (!isRefresh) setEntries((prev) => prev ?? []);
-        setError(messageForError(err));
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-      }
-    },
-    [max],
-  );
+  // Load entries from Firestore on mount
+  const loadEntries = useCallback(async () => {
+    if (!uid) {
+      setLoading(false);
+      return;
+    }
+    try {
+      setLoading(true);
+      const docs = await getJournalEntries(uid);
+      setEntries(docs.map(fromFirestore));
+    } catch (e) {
+      setError('Failed to load entries.');
+      console.error('useJournalEntries load error:', e);
+    } finally {
+      setLoading(false);
+    }
+  }, [uid]);
 
   useEffect(() => {
-    setLoading(true);
-    fetchEntries(false);
-    // Re-run if the signed-in user changes (e.g. logs out and a different
-    // account logs in without a full app reload).
-  }, [fetchEntries]);
+    loadEntries();
+  }, [loadEntries]);
 
-  const refresh = useCallback(async () => {
-    setRefreshing(true);
-    await fetchEntries(true);
-  }, [fetchEntries]);
+  // Add a new entry — saves to Firestore and updates local state
+  const addEntry = async (entry: Omit<JournalEntry, 'id'>) => {
+    if (!uid) return;
+    try {
+      const id = await saveJournalEntry(uid, {
+        title: entry.title,
+        body: entry.content,
+        mood: entry.mood,
+        createdAt: new Date(entry.createdAt),
+      });
+      const newEntry: JournalEntry = { ...entry, id };
+      setEntries((prev) => [newEntry, ...prev]);
+    } catch (e) {
+      setError('Failed to save entry.');
+      console.error('useJournalEntries addEntry error:', e);
+    }
+  };
 
-  return { entries, loading, refreshing, error, refresh };
+  // Update an existing entry — saves to Firestore and updates local state
+  const updateEntry = async (updated: JournalEntry) => {
+    if (!uid) return;
+    try {
+      await updateJournalEntry(uid, updated.id, {
+        title: updated.title,
+        body: updated.content,
+        mood: updated.mood,
+      });
+      setEntries((prev) =>
+        prev.map((e) => (e.id === updated.id ? updated : e))
+      );
+    } catch (e) {
+      setError('Failed to update entry.');
+      console.error('useJournalEntries updateEntry error:', e);
+    }
+  };
+
+  // Delete an entry — removes from Firestore and updates local state
+  const deleteEntry = async (id: string) => {
+    if (!uid) return;
+    try {
+      await deleteJournalEntry(uid, id);
+      setEntries((prev) => prev.filter((e) => e.id !== id));
+    } catch (e) {
+      setError('Failed to delete entry.');
+      console.error('useJournalEntries deleteEntry error:', e);
+    }
+  };
+
+  const getEntry = (id: string) => entries.find((e) => e.id === id);
+
+  return { entries, loading, error, addEntry, updateEntry, deleteEntry, getEntry, refresh: loadEntries };
 }
