@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
     height: 52,
   },
   wrapperFocused: {
-    borderColor: colors.coral,
+    borderColor: colors.primary,
   },
   input: {
     flex: 1,

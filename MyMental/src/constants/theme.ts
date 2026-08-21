@@ -5,7 +5,12 @@ export const colors = {
   paper: '#FDF8F3',
   paperDim: '#F5EFE8',
 
-  // Coral — primary brand
+  // Primary — brand (light green)
+  primary: '#4CAF7D',
+  primaryMid: '#8FD1AC',
+  primaryLight: '#EAF7EF',
+
+  // Coral — destructive / alerts (not primary anymore)
   coral: '#D85A30',
   coralMid: '#F0997B',
   coralLight: '#FAECE7',

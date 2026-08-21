@@ -1,3 +1,7 @@
+// src/components/MoodCalendar.tsx
+// Monthly calendar grid — days show up to 3 coloured dots based on mood
+// Tapping a day opens day-view with that day's entries
+
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { getMoodColor, MoodLevel } from '../hooks/useJournalEntries';
@@ -145,11 +149,16 @@ export default function MoodCalendar({ entries, onDayPress }: Props) {
   );
 }
 
-function toDateKey(isoString: string): string {
+function toDateKey(dateString: string): string {
   try {
-    const d = new Date(isoString);
+    const d = new Date(dateString);
     if (isNaN(d.getTime())) return '';
-    return d.toISOString().split('T')[0];
+
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
   } catch {
     return '';
   }

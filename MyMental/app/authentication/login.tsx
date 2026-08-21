@@ -152,14 +152,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   primaryButton: {
-    backgroundColor: colors.coral,
+    backgroundColor: colors.primary,
     borderRadius: radius.full,
     height: 52,
     justifyContent: 'center',
     alignItems: 'center',
   },
   buttonDisabled: {
-    backgroundColor: colors.coralMid,
+    backgroundColor: colors.primaryMid,
   },
   primaryButtonText: {
     fontFamily: fonts.sansSemiBold,
@@ -177,6 +177,6 @@ const styles = StyleSheet.create({
   },
   footerTextAccent: {
     fontFamily: fonts.sansSemiBold,
-    color: colors.coral,
+    color: colors.primary,
   },
 });

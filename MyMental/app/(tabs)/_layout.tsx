@@ -24,7 +24,7 @@ function TabIcon({
         name={focused ? icon : outlineIcon}
         size={30}
         paddingTop={1}
-        color={focused ? colors.coral : colors.mutedLight}
+        color={focused ? colors.primary : colors.mutedLight}
       />
 
       <Text
@@ -40,12 +40,13 @@ function TabIcon({
   );
 }
 
+
 export default function TabsLayout() {
   return (
     <SafeAreaView
-      style={{ flex: 1, backgroundColor: colors.white }}
-      edges={["bottom"]}
-    >
+  style={{ flex: 1, backgroundColor: colors.white }}
+  edges={["bottom"]}
+>
       <Tabs
         screenOptions={{
           headerShown: false,
@@ -130,12 +131,13 @@ export default function TabsLayout() {
   );
 }
 
+
 const styles = StyleSheet.create({
   tabBar: {
     backgroundColor: colors.white,
     borderTopColor: colors.border,
     borderTopWidth: 1,
-    height: 55,
+    height: 55, // Increased height to accommodate multi-line text
     paddingTop: 20,
     paddingBottom: 0,
   },
@@ -146,7 +148,7 @@ const styles = StyleSheet.create({
     width: "100%",
     flex: 1,
     minWidth: 200,
-  },
+    },
 
   tabLabel: {
     fontFamily: fonts.sans,
@@ -160,6 +162,6 @@ const styles = StyleSheet.create({
   },
 
   tabLabelActive: {
-    color: colors.coral,
+    color: colors.primary,
   },
 });

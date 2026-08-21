@@ -17,11 +17,9 @@ import {
   updatePassword,
   deleteUser,
 } from 'firebase/auth';
-import { doc, deleteDoc } from 'firebase/firestore';
-
 import { colors, fonts, spacing, radius } from '../../src/constants/theme';
 import { auth } from '../../src/firebase/auth';
-import { db } from '../../src/firebase/config';
+import { deleteUserDoc } from '../../src/firebase/firestore';
 import ScreenHeader from '../../src/components/ScreenHeader';
 
 export default function PrivacySecurityScreen() {
@@ -96,7 +94,7 @@ export default function PrivacySecurityScreen() {
             try {
               await reauthenticate(currentPassword);
               if (user) {
-                await deleteDoc(doc(db, 'users', user.uid));
+                await deleteUserDoc(user.uid);
                 await deleteUser(user);
               }
               router.replace('/authentication/login');
@@ -239,7 +237,7 @@ const styles = StyleSheet.create({
     color: colors.ink,
   },
   primaryButton: {
-    backgroundColor: colors.coral,
+    backgroundColor: colors.primary,
     borderRadius: radius.full,
     paddingVertical: spacing.lg,
     alignItems: 'center',

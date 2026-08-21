@@ -1,13 +1,10 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useJournalEntries } from '../../src/hooks/useJournalEntries';
 import {
   View, Text, StyleSheet, SafeAreaView,
   ScrollView, TouchableOpacity, ActivityIndicator, Dimensions,
 } from 'react-native';
-import { auth } from '../../src/firebase/auth';
-import { getJournalEntries } from '../../src/firebase/firestore';
-import { Timestamp } from 'firebase/firestore';
 import { colors, fonts, spacing, radius } from '../../src/constants/theme';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -16,7 +13,6 @@ const CHART_HEIGHT = 160;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type MoodLevel = 'very_bad' | 'bad' | 'neutral' | 'good' | 'great';
 type TimeFilter = 'week' | 'month' | '3months' | '6months' | 'year';
 
 type Entry = {
@@ -68,7 +64,6 @@ export default function InsightsScreen() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<TimeFilter>('week');
-  const uid = auth.currentUser?.uid;
 
   const { entries: journalEntries } = useJournalEntries();
 

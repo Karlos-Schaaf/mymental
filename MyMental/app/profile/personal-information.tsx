@@ -11,11 +11,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { updateProfile } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
 
 import { colors, fonts, spacing, radius } from '../../src/constants/theme';
 import { auth } from '../../src/firebase/auth';
-import { db } from '../../src/firebase/config';
+import { updateUserDisplayName } from '../../src/firebase/firestore';
 import ScreenHeader from '../../src/components/ScreenHeader';
 
 export default function PersonalInformationScreen() {
@@ -40,11 +39,7 @@ export default function PersonalInformationScreen() {
       await updateProfile(user, { displayName: trimmed });
 
       // Keep the users/{uid} Firestore doc in sync with auth profile
-      await setDoc(
-        doc(db, 'users', user.uid),
-        { profile: { displayName: trimmed } },
-        { merge: true }
-      );
+      await updateUserDisplayName(user.uid, trimmed);
 
       Alert.alert('Saved', 'Your personal information has been updated.');
     } catch (error) {
@@ -154,14 +149,14 @@ const styles = StyleSheet.create({
     color: colors.mutedLight,
   },
   saveButton: {
-    backgroundColor: colors.coral,
+    backgroundColor: colors.primary,
     borderRadius: radius.full,
     paddingVertical: spacing.lg,
     alignItems: 'center',
     marginTop: spacing.md,
   },
   saveButtonDisabled: {
-    backgroundColor: colors.coralMid,
+    backgroundColor: colors.primaryMid,
   },
   saveButtonText: {
     fontFamily: fonts.sansSemiBold,

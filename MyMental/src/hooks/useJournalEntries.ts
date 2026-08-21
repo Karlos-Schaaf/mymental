@@ -105,11 +105,11 @@ export function useJournalEntries() {
     } finally {
       setLoading(false);
     }
-  }, [uid]);
+  }, [uid, setEntries]);
 
   useEffect(() => {
     if (entries.length === 0) loadEntries();
-  }, []);
+  }, [entries.length, loadEntries]);
 
   const addEntry = async (entry: Omit<JournalEntry, 'id'>) => {
     if (!uid) return;

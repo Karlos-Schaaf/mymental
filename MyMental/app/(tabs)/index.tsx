@@ -285,7 +285,7 @@ export default function HomeScreen() {
           />
           <QuickAction
             icon="bulb-outline"
-            label="AI Insights"
+            label="Insights"
             onPress={() => router.push('/insights')}
           />
           <QuickAction

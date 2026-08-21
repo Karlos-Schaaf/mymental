@@ -85,11 +85,11 @@ export default function HelpSupportScreen() {
         <View style={styles.crisisCard}>
           <Text style={styles.crisisTitle}>Need to talk to someone now?</Text>
           <Text style={styles.crisisText}>
-            <Text style={styles.crisisText}>
-            <Text style={styles.crisisText}>
-            {"If you're in crisis or thinking about suicide, please reach out for support. In New Zealand, you can call or text 1737 to talk with a trained counsellor anytime. If you feel in immediate danger, call 111 for emergency assistance."}
-          </Text>
-          </Text>
+            If you're in crisis or thinking about suicide, please reach out to
+            a crisis line in your country right away. In the US, call or text
+            988. In New Zealand, call or text 1737. If you're outside these
+            countries, search "crisis helpline" plus your country name to find
+            local support.
           </Text>
         </View>
 
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.coral,
+    backgroundColor: colors.primary,
     borderRadius: radius.full,
     paddingVertical: spacing.lg,
   },
