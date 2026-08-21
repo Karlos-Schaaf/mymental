@@ -11,8 +11,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
 
-import { colors, fonts, spacing, radius } from '../../src/constants/theme';
-import ScreenHeader from '../../src/components/ScreenHeader';
+import { colors, fonts, spacing, radius } from '../../../src/constants/theme';
+import ScreenHeader from '../../../src/components/ScreenHeader';
 
 const LINKS = [
   {

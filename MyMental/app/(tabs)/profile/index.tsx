@@ -12,9 +12,9 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { signOut } from 'firebase/auth';
 
-import { colors, fonts, spacing, radius } from '../../src/constants/theme';
-import { auth } from '../../src/firebase/auth';
-import ScreenHeader from '../../src/components/ScreenHeader';
+import { colors, fonts, spacing, radius } from '../../../src/constants/theme';
+import { auth } from '../../../src/firebase/auth';
+import ScreenHeader from '../../../src/components/ScreenHeader';
 
 type MenuItemProps = {
   icon: keyof typeof Ionicons.glyphMap;

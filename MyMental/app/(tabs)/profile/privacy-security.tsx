@@ -17,10 +17,10 @@ import {
   updatePassword,
   deleteUser,
 } from 'firebase/auth';
-import { colors, fonts, spacing, radius } from '../../src/constants/theme';
-import { auth } from '../../src/firebase/auth';
-import { deleteUserDoc } from '../../src/firebase/firestore';
-import ScreenHeader from '../../src/components/ScreenHeader';
+import { colors, fonts, spacing, radius } from '../../../src/constants/theme';
+import { auth } from '../../../src/firebase/auth';
+import { deleteUserDoc } from '../../../src/firebase/firestore';
+import ScreenHeader from '../../../src/components/ScreenHeader';
 
 export default function PrivacySecurityScreen() {
   const user = auth.currentUser;

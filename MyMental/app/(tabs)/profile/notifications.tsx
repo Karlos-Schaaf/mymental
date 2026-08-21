@@ -3,11 +3,11 @@ import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-nat
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
-import { colors, fonts, spacing, radius } from '../../src/constants/theme';
-import { auth } from '../../src/firebase/auth';
-import { db } from '../../src/firebase/config';
-import ScreenHeader from '../../src/components/ScreenHeader';
-import SettingsToggleRow from '../../src/components/SettingsToggleRow';
+import { colors, fonts, spacing, radius } from '../../../src/constants/theme';
+import { auth } from '../../../src/firebase/auth';
+import { db } from '../../../src/firebase/config';
+import ScreenHeader from '../../../src/components/ScreenHeader';
+import SettingsToggleRow from '../../../src/components/SettingsToggleRow';
 
 type NotificationPrefs = {
   dailyReminder: boolean;

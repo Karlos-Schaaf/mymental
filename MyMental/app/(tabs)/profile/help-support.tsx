@@ -10,8 +10,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-import { colors, fonts, spacing, radius } from '../../src/constants/theme';
-import ScreenHeader from '../../src/components/ScreenHeader';
+import { colors, fonts, spacing, radius } from '../../../src/constants/theme';
+import ScreenHeader from '../../../src/components/ScreenHeader';
 
 const FAQS = [
   {
@@ -85,10 +85,10 @@ export default function HelpSupportScreen() {
         <View style={styles.crisisCard}>
           <Text style={styles.crisisTitle}>Need to talk to someone now?</Text>
           <Text style={styles.crisisText}>
-            If you're in crisis or thinking about suicide, please reach out to
+            If you&apos;re in crisis or thinking about suicide, please reach out to
             a crisis line in your country right away. In the US, call or text
-            988. In New Zealand, call or text 1737. If you're outside these
-            countries, search "crisis helpline" plus your country name to find
+            988. In New Zealand, call or text 1737. If you&apos;re outside these
+            countries, search &quot;crisis helpline&quot; plus your country name to find
             local support.
           </Text>
         </View>

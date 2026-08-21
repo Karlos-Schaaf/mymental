@@ -12,10 +12,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { updateProfile } from 'firebase/auth';
 
-import { colors, fonts, spacing, radius } from '../../src/constants/theme';
-import { auth } from '../../src/firebase/auth';
-import { updateUserDisplayName } from '../../src/firebase/firestore';
-import ScreenHeader from '../../src/components/ScreenHeader';
+import { colors, fonts, spacing, radius } from '../../../src/constants/theme';
+import { auth } from '../../../src/firebase/auth';
+import { updateUserDisplayName } from '../../../src/firebase/firestore';
+import ScreenHeader from '../../../src/components/ScreenHeader';
 
 export default function PersonalInformationScreen() {
   const user = auth.currentUser;
