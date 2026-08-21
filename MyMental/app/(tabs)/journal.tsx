@@ -1,7 +1,3 @@
-// app/(tabs)/journal.tsx
-// Trello Card #19 - View Journal Home
-// Inline mood selector + journal entry creation, recent entries list, mood calendar
-
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
@@ -40,7 +36,7 @@ export default function JournalHomeScreen() {
   const [content, setContent] = useState('');
 
   const sortedEntries = [...entries].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
   );
   const recentEntries = sortedEntries.slice(0, 3);
 
@@ -58,6 +54,7 @@ export default function JournalHomeScreen() {
       content: content.trim(),
       mood: selectedMood,
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     });
     setTitle('');
     setContent('');
@@ -183,7 +180,7 @@ export default function JournalHomeScreen() {
           <MoodCalendar
             entries={entries}
             onDayPress={(date) =>
-              router.push({ pathname: '/entry/day-view', params: { date } })
+              router.push({ pathname: '/entry/day-view' as any, params: { date } })
             }
           />
 

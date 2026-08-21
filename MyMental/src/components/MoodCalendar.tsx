@@ -1,7 +1,3 @@
-// src/components/MoodCalendar.tsx
-// Monthly calendar grid — days show up to 3 coloured dots based on mood
-// Tapping a day opens day-view with that day's entries
-
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { getMoodColor, MoodLevel } from '../hooks/useJournalEntries';
