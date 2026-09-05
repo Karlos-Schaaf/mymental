@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 
 import { Link } from 'expo-router';
-import { colors, fonts, spacing } from '../../src/constants/theme';
+import { colors, fonts, spacing } from '../../../src/constants/theme';
+
 
 export default function EmergencyScreen() {
   return (
