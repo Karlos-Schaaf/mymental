@@ -129,7 +129,7 @@ export default function HomeScreen() {
         {/* Greeting */}
         <View style={styles.greetingBlock}>
           <Text style={styles.greeting}>
-            Good {timeGreeting}, {firstName} 👋
+            Good {timeGreeting}, {firstName}
           </Text>
           <Text style={styles.greetingSubtitle}>How are you feeling today?</Text>
         </View>
