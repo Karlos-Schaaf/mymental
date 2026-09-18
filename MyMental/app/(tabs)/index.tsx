@@ -50,6 +50,13 @@ function useDashboardStats(entries: JournalEntry[]) {
     const overallMoodAvg = average(moodScores(entries));
     const displayedMood = thisWeekMoodAvg ?? overallMoodAvg;
 
+
+const thisWeekStressAvg = average(
+  thisWeek
+    .map((e) => e.stress)
+    .filter((s): s is number => s !== undefined),
+);
+
     let moodTrend: 'up' | 'down' | 'flat' | null = null;
     if (thisWeekMoodAvg !== null && lastWeekMoodAvg !== null) {
       const diff = thisWeekMoodAvg - lastWeekMoodAvg;
@@ -61,6 +68,7 @@ function useDashboardStats(entries: JournalEntry[]) {
       displayedMood,
       moodTrend,
       checkins: thisWeek.length,
+      thisWeekStressAvg,
     };
   }, [entries]);
 }
@@ -225,15 +233,26 @@ export default function HomeScreen() {
             {/* Stress + Check-ins */}
             <View style={styles.statsRow}>
               <View style={styles.statCard}>
-                <Ionicons
-                  name="trending-down"
-                  size={18}
-                  color={colors.mutedLight}
-                />
-                <Text style={styles.cardLabel}>Stress Level</Text>
-                <Text style={styles.statValue}>—</Text>
-                <Text style={styles.statSubtitle}>Not tracked yet</Text>
-              </View>
+  <Ionicons
+    name="trending-down"
+    size={18}
+    color={colors.teal}
+  />
+
+  <Text style={styles.cardLabel}>Stress Level</Text>
+
+  <Text style={styles.statValue}>
+    {stats.thisWeekStressAvg !== null
+      ? `${stats.thisWeekStressAvg.toFixed(1)}/10`
+      : '—'}
+  </Text>
+
+  <Text style={styles.statSubtitle}>
+    {stats.thisWeekStressAvg !== null
+      ? 'Average this week'
+      : 'Track stress to see your average'}
+  </Text>
+</View>
 
               <View style={styles.statCard}>
                 <Ionicons name="calendar-outline" size={18} color={colors.teal} />
