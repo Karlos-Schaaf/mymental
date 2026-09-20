@@ -43,10 +43,12 @@ function TabIcon({
 
 export default function TabsLayout() {
   return (
+    
     <SafeAreaView
   style={{ flex: 1, backgroundColor: colors.white }}
   edges={["bottom"]}
 >
+      
       <Tabs
         screenOptions={{
           headerShown: false,
@@ -126,8 +128,19 @@ export default function TabsLayout() {
             ),
           }}
         />
+
+        <Tabs.Screen
+  name="entry"
+  options={{
+    href: null,
+  }}
+/>
+
+
+
       </Tabs>
     </SafeAreaView>
+
   );
 }
 

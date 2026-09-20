@@ -50,6 +50,10 @@ export const spacing = {
   xl: 20,
   xxl: 28,
   xxxl: 36,
+  xxxxl: 48,
+  xxxxxl: 60,
+  xxxxxxl: 72,
+  xxxxxxxl: 96,
 };
 
 export const radius = {

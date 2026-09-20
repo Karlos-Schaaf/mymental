@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 
 import { auth } from '../src/firebase/auth';
+import { NewEntryProvider } from '../src/context/NewEntryContext';
 
 export default function RootLayout() {
   const [user, setUser] = useState<User | null>(null);
@@ -55,15 +56,17 @@ export default function RootLayout() {
   }
 
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <Stack.Screen name="authentication/login" />
-      <Stack.Screen name="authentication/signup" />
-      <Stack.Screen name="onboarding" />
-      <Stack.Screen name="(tabs)" />
-    </Stack>
+    <NewEntryProvider>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+        }}
+      >
+        <Stack.Screen name="authentication/login" />
+        <Stack.Screen name="authentication/signup" />
+        <Stack.Screen name="onboarding" />
+        <Stack.Screen name="(tabs)" />
+      </Stack>
+    </NewEntryProvider>
   );
 }
