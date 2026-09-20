@@ -30,8 +30,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await login(email.trim(), password);
-      // Successful sign-in is picked up by the auth listener in the root
-      // layout, which redirects into the app automatically.
+      router.replace('/(tabs)');
     } catch (error: any) {
       Alert.alert('Login Failed', error.message ?? 'Please try again.');
     } finally {
