@@ -41,10 +41,10 @@ export default function SignupScreen() {
 
     setLoading(true);
     try {
-      await signup(email.trim(), password);
-      // Successful sign-up is picked up by the auth listener in the root
-      // layout, which redirects into the app automatically.
-    } catch (error: any) {
+  await signup(email.trim(), password);
+
+  router.replace('/onboarding');
+} catch (error: any) {
       Alert.alert('Sign Up Failed', error.message ?? 'Please try again.');
     } finally {
       setLoading(false);
