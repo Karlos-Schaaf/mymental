@@ -18,7 +18,7 @@ type MoodOption = {
 const MOODS: MoodOption[] = [
   { level: 'very_bad', icon: 'sad', label: 'Very Bad', color: '#C2553A' },
   { level: 'bad', icon: 'sad-outline', label: 'Bad', color: '#C8843A' },
-  { level: 'neutral', icon: 'remove-circle-outline', label: 'Neutral', color: '#9A9188' },
+  { level: 'neutral', icon: 'remove-circle-outline', label: 'Neutral', color: '#6b6c61' },
   { level: 'good', icon: 'happy-outline', label: 'Good', color: '#5AA87A' },
   { level: 'great', icon: 'happy', label: 'Great', color: '#3E9B6B' },
 ];

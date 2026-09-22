@@ -18,6 +18,18 @@ import {
 
 import { db } from "./config";
 
+// Firestore's addDoc/updateDoc reject any field whose value is literally
+// `undefined` (as opposed to the field being absent). Optional fields on
+// FirestoreJournalEntry (title, mood, stress, energy, prompt) can easily
+// end up `undefined` when a step in the entry flow is skipped, so we strip
+// those keys out entirely before writing rather than requiring every call
+// site to remember to omit them.
+function omitUndefined<T extends object>(obj: T): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([, v]) => v !== undefined),
+  ) as Partial<T>;
+}
+
 // ---------- Journal Entries (user-scoped) ----------
 
 export type FirestoreJournalEntry = {
@@ -27,6 +39,11 @@ export type FirestoreJournalEntry = {
   mood?: string;
   energy?: number;
   stress?: number;
+  sleepHours?: number;
+  physicalActivity?: number;
+  socialInteraction?: number;
+  productivity?: number;
+  screenTime?: number;
   prompt?: string;
   createdAt: Timestamp | Date;
 };
@@ -36,15 +53,14 @@ export async function saveJournalEntry(
   uid: string,
   entry: Omit<FirestoreJournalEntry, "id">
 ) {
-  const ref = await addDoc(
-    collection(db, "users", uid, "entries"),
-    {
-      ...entry,
-      createdAt: Timestamp.fromDate(
-        entry.createdAt instanceof Date ? entry.createdAt : new Date()
-      ),
-    }
-  );
+  const payload = omitUndefined({
+    ...entry,
+    createdAt: Timestamp.fromDate(
+      entry.createdAt instanceof Date ? entry.createdAt : new Date()
+    ),
+  });
+
+  const ref = await addDoc(collection(db, "users", uid, "entries"), payload);
   return ref.id;
 }
 
@@ -67,7 +83,7 @@ export async function updateJournalEntry(
   entryId: string,
   updates: Partial<Omit<FirestoreJournalEntry, "id">>
 ) {
-  await updateDoc(doc(db, "users", uid, "entries", entryId), updates);
+  await updateDoc(doc(db, "users", uid, "entries", entryId), omitUndefined(updates));
 }
 
 // Delete a journal entry
