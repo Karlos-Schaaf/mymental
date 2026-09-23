@@ -93,6 +93,7 @@ export default function ProfileScreen() {
             label="Personal Information"
             onPress={() => router.push('/profile/personal-information')}
           />
+          
           <MenuItem
             icon="lock-closed-outline"
             label="Privacy & Security"
@@ -103,7 +104,13 @@ export default function ProfileScreen() {
             label="Notification Settings"
             onPress={() => router.push('/profile/notifications')}
           />
-          <MenuItem
+          
+<MenuItem
+  icon="options-outline"
+  label="Journaling Settings"
+  onPress={() => router.push('/profile/journaling-settings')}
+/>
+  <MenuItem
             icon="help-circle-outline"
             label="Help & Support"
             onPress={() => router.push('/profile/help-support')}
