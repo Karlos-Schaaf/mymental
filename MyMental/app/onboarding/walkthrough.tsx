@@ -56,7 +56,7 @@ const slides: Slide[] = [
     icon: 'checkmark-outline',
     title: "You're all set!",
     description:
-      'Your MyMental space is ready. Start with your first journal entry or explore your dashboard.',
+      'One last step — choose what you would like to track when you journal.',
   },
 ];
 
@@ -109,14 +109,8 @@ export default function WalkthroughScreen() {
     setCurrentIndex(index);
   };
 
-  const handleJournal = () => {
-    // Later we will save onboardingCompleted = true before navigating.
-    router.replace('/journal');
-  };
-
-  const handleHome = () => {
-    // Later we will save onboardingCompleted = true before navigating.
-    router.replace('/(tabs)');
+  const handleContinue = () => {
+    router.push('/onboarding/journaling');
   };
 
   const renderSlide = ({
@@ -159,28 +153,18 @@ export default function WalkthroughScreen() {
           {finalSlide && (
             <View style={styles.finalActions}>
               <TouchableOpacity
-                style={styles.journalButton}
-                onPress={handleJournal}
+                style={styles.continueButton}
+                onPress={handleContinue}
                 activeOpacity={0.85}
               >
                 <Ionicons
-                  name="book-outline"
+                  name="options-outline"
                   size={20}
                   color={colors.white}
                 />
 
-                <Text style={styles.journalButtonText}>
-                  Write My First Journal
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.homeButton}
-                onPress={handleHome}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.homeButtonText}>
-                  Go to Home
+                <Text style={styles.continueButtonText}>
+                  Choose What to Track
                 </Text>
               </TouchableOpacity>
             </View>
@@ -414,10 +398,9 @@ const styles = StyleSheet.create({
   finalActions: {
     width: '100%',
     marginTop: spacing.xxl,
-    gap: spacing.md,
   },
 
-  journalButton: {
+  continueButton: {
     minHeight: 56,
     borderRadius: radius.full,
     backgroundColor: colors.teal,
@@ -427,26 +410,10 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
 
-  journalButtonText: {
+  continueButtonText: {
     fontFamily: fonts.sansSemiBold,
     fontSize: 15,
     color: colors.white,
-  },
-
-  homeButton: {
-    minHeight: 54,
-    borderRadius: radius.full,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  homeButtonText: {
-    fontFamily: fonts.sansSemiBold,
-    fontSize: 15,
-    color: colors.ink,
   },
 
   finalDots: {

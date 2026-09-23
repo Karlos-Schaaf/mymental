@@ -13,6 +13,7 @@ import {
   deleteDoc,
   query,
   orderBy,
+  onSnapshot,
   Timestamp,
 } from "firebase/firestore";
 
@@ -84,9 +85,39 @@ export type NotificationPrefs = {
   resourceUpdates: boolean;
 };
 
+export type JournalTrackingOption =
+  | 'mood'
+  | 'energy'
+  | 'stress'
+  | 'journal'
+  | 'sleep'
+  | 'productivity'
+  | 'physicalActivity'
+  | 'socialInteraction'
+  | 'screenTime';
+
+export type JournalingPrefs = {
+  trackingOptions: JournalTrackingOption[];
+};
+
+export const DEFAULT_JOURNALING_OPTIONS: JournalTrackingOption[] = [
+  'mood',
+  'stress',
+  'journal',
+];
+
 export async function getUserDoc(uid: string) {
   const snap = await getDoc(doc(db, "users", uid));
   return snap.exists() ? snap.data() : null;
+}
+
+export function subscribeToUserDoc(
+  uid: string,
+  callback: (data: any | null) => void
+) {
+  return onSnapshot(doc(db, 'users', uid), (snapshot) => {
+    callback(snapshot.exists() ? snapshot.data() : null);
+  });
 }
 
 export async function updateUserDisplayName(uid: string, displayName: string) {
@@ -104,6 +135,43 @@ export async function updateNotificationPrefs(
   await setDoc(
     doc(db, "users", uid),
     { preferences: { notifications: prefs } },
+    { merge: true }
+  );
+}
+
+export async function updateJournalingPrefs(
+  uid: string,
+  trackingOptions: JournalTrackingOption[]
+) {
+  await setDoc(
+    doc(db, 'users', uid),
+    {
+      preferences: {
+        journaling: {
+          trackingOptions,
+        },
+      },
+    },
+    { merge: true }
+  );
+}
+
+export async function startOnboarding(uid: string) {
+  await setDoc(
+    doc(db, 'users', uid),
+    {
+      onboardingCompleted: false,
+    },
+    { merge: true }
+  );
+}
+
+export async function completeOnboarding(uid: string) {
+  await setDoc(
+    doc(db, 'users', uid),
+    {
+      onboardingCompleted: true,
+    },
     { merge: true }
   );
 }

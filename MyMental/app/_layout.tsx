@@ -3,30 +3,65 @@ import { useEffect, useState } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 
 import { auth } from '../src/firebase/auth';
+import { subscribeToUserDoc } from '../src/firebase/firestore';
 import { NewEntryProvider } from '../src/context/NewEntryContext';
 
 export default function RootLayout() {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [userDocLoading, setUserDocLoading] = useState(true);
+  const [onboardingCompleted, setOnboardingCompleted] = useState<
+    boolean | null
+  >(null);
 
   const segments = useSegments();
 
+  // Listen for Firebase authentication changes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      setLoading(false);
+      setAuthLoading(false);
+
+      if (!currentUser) {
+        setOnboardingCompleted(null);
+        setUserDocLoading(false);
+      } else {
+        setUserDocLoading(true);
+      }
     });
 
     return unsubscribe;
   }, []);
 
+  // Listen for changes to the user's Firestore document
   useEffect(() => {
-    if (loading) return;
+    if (!user) {
+      return;
+    }
+
+    const unsubscribe = subscribeToUserDoc(user.uid, (userDoc) => {
+      const completed =
+        userDoc?.onboardingCompleted === true ||
+        (userDoc?.onboardingCompleted === undefined &&
+          !!user.displayName);
+
+      setOnboardingCompleted(completed);
+      setUserDocLoading(false);
+    });
+
+    return unsubscribe;
+  }, [user]);
+
+  // Handle navigation
+  useEffect(() => {
+    if (authLoading || userDocLoading) {
+      return;
+    }
 
     const inAuthentication = segments[0] === 'authentication';
     const inOnboarding = segments[0] === 'onboarding';
 
-    // User is logged out.
+    // Not signed in
     if (!user) {
       if (!inAuthentication) {
         router.replace('/authentication/login');
@@ -34,24 +69,29 @@ export default function RootLayout() {
       return;
     }
 
-    // User exists but has not entered a name yet.
-    // Treat this as onboarding not completed.
-    const needsOnboarding = !user.displayName;
-
-    if (needsOnboarding) {
+    // Signed in but onboarding is not finished
+    if (onboardingCompleted === false) {
       if (!inOnboarding) {
         router.replace('/onboarding');
       }
       return;
     }
 
-    // User has completed onboarding.
-    if (inAuthentication || inOnboarding) {
-      router.replace('/(tabs)');
+    // Signed in and onboarding is finished
+    if (onboardingCompleted === true) {
+      if (inAuthentication || inOnboarding) {
+        router.replace('/(tabs)');
+      }
     }
-  }, [user, loading, segments]);
+  }, [
+    user,
+    authLoading,
+    userDocLoading,
+    onboardingCompleted,
+    segments,
+  ]);
 
-  if (loading) {
+  if (authLoading || userDocLoading) {
     return null;
   }
 

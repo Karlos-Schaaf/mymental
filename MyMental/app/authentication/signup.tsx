@@ -1,3 +1,4 @@
+import { startOnboarding } from '../../src/firebase/firestore';
 import React, { useState } from 'react';
 import {
   View,
@@ -41,9 +42,10 @@ export default function SignupScreen() {
 
     setLoading(true);
     try {
-  await signup(email.trim(), password);
+  const userCredential = await signup(email.trim(), password);
 
-  router.replace('/onboarding');
+await startOnboarding(userCredential.user.uid);
+
 } catch (error: any) {
       Alert.alert('Sign Up Failed', error.message ?? 'Please try again.');
     } finally {
