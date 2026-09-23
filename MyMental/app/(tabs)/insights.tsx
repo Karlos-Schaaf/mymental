@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useJournalEntries } from '../../src/hooks/useJournalEntries';
 import {
   View, Text, StyleSheet, SafeAreaView,
@@ -8,7 +7,7 @@ import {
 import { colors, fonts, spacing, radius } from '../../src/constants/theme';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const CHART_WIDTH = SCREEN_WIDTH - spacing.xl * 2 - spacing.xl * 2;
+const CHART_WIDTH = Math.max(0, SCREEN_WIDTH - spacing.xl * 4);
 const CHART_HEIGHT = 160;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -20,6 +19,8 @@ type Entry = {
   mood?: string;
   createdAt: Date;
 };
+
+type ChartPoint = { label: string; score: number | null };
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -47,8 +48,7 @@ const FILTER_LABELS: { key: TimeFilter; label: string }[] = [
   { key: 'year',    label: '1Y' },
 ];
 
-function getStartDate(filter: TimeFilter): Date {
-  const now = new Date();
+function getStartDate(filter: TimeFilter, now: Date): Date {
   switch (filter) {
     case 'week':    return new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
     case 'month':   return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -58,33 +58,54 @@ function getStartDate(filter: TimeFilter): Date {
   }
 }
 
+// Ticks `now` on an interval so time-based filters stay fresh without
+// calling Date.now() during render (React purity rule).
+function useNow(intervalMs = 60_000): Date {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), intervalMs);
+    return () => clearInterval(id);
+  }, [intervalMs]);
+  return now;
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function InsightsScreen() {
-  const [entries, setEntries] = useState<Entry[]>([]);
-  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<TimeFilter>('week');
 
-  const { entries: journalEntries } = useJournalEntries();
+  const { entries: journalEntries, loading } = useJournalEntries();
+  const now = useNow();
 
-  useEffect(() => {
-    setEntries(
-      journalEntries
+  // Derive entries — no effect, no local state copy.
+  const entries: Entry[] = useMemo(
+    () =>
+      (journalEntries ?? [])
         .filter((e) => e.mood)
         .map((e) => ({
           id: e.id,
           mood: e.mood,
           createdAt: new Date(e.createdAt),
-      }))
+        })),
+    [journalEntries],
   );
-  setLoading(false);
-}, [journalEntries]);
 
-  const startDate = getStartDate(filter);
-  const filtered = entries.filter((e) => e.createdAt >= startDate);
+  const startDate = useMemo(() => getStartDate(filter, now), [filter, now]);
+
+  const filtered = useMemo(
+    () => entries.filter((e) => e.createdAt >= startDate),
+    [entries, startDate],
+  );
+
   const hasData = filtered.length > 0;
-  const linePoints = buildLinePoints(filtered, filter, startDate);
-  const distribution = buildDistribution(filtered);
+  const linePoints = useMemo(
+    () => buildLinePoints(filtered, filter, startDate, now),
+    [filtered, filter, startDate, now],
+  );
+  const distribution = useMemo(() => buildDistribution(filtered), [filtered]);
+
+  // Count only real (non-null) data points for the "enough to chart" check.
+  const realPoints = linePoints.filter((p) => p.score !== null).length;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -126,7 +147,7 @@ export default function InsightsScreen() {
             {/* Mood Trends Line Chart */}
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Mood Trends</Text>
-              {linePoints.length < 2 ? (
+              {realPoints < 2 ? (
                 <Text style={styles.emptyText}>Add more entries to see a trend.</Text>
               ) : (
                 <LineChart points={linePoints} />
@@ -178,8 +199,6 @@ export default function InsightsScreen() {
 
 // ── Line Chart (pure React Native) ────────────────────────────────────────────
 
-type ChartPoint = { label: string; score: number };
-
 function LineChart({ points }: { points: ChartPoint[] }) {
   const minScore = 1;
   const maxScore = 5;
@@ -193,18 +212,33 @@ function LineChart({ points }: { points: ChartPoint[] }) {
   const innerW = w - padL - padR;
   const innerH = h - padT - padB;
 
-  const getX = (i: number) => padL + (i / (points.length - 1)) * innerW;
+  const n = points.length;
+  const getX = (i: number) =>
+    n <= 1 ? padL + innerW / 2 : padL + (i / (n - 1)) * innerW;
   const getY = (score: number) => padT + ((maxScore - score) / range) * innerH;
 
-  // Build SVG-style path using absolute positioning
-  const dotPositions = points.map((p, i) => ({
-    x: getX(i),
-    y: getY(p.score),
-    label: p.label,
-    score: p.score,
-  }));
+  // Dots: only real (non-null) points.
+  const dotPositions = points
+    .map((p, i) => ({
+      x: getX(i),
+      y: p.score === null ? null : getY(p.score),
+      score: p.score,
+    }))
+    .filter((p): p is { x: number; y: number; score: number } => p.y !== null);
 
-  // Y axis labels
+  // Line segments between *adjacent* real points only — nulls break the line.
+  const segments: { x1: number; y1: number; x2: number; y2: number }[] = [];
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = points[i];
+    const b = points[i + 1];
+    if (a.score !== null && b.score !== null) {
+      segments.push({
+        x1: getX(i),     y1: getY(a.score),
+        x2: getX(i + 1), y2: getY(b.score),
+      });
+    }
+  }
+
   const yLabels = [
     { score: 5, label: 'Great' },
     { score: 4, label: 'Good' },
@@ -235,24 +269,26 @@ function LineChart({ points }: { points: ChartPoint[] }) {
           </View>
         ))}
 
-        {/* Line segments between dots */}
-        {dotPositions.slice(0, -1).map((p, i) => {
-          const next = dotPositions[i + 1];
-          const dx = next.x - p.x;
-          const dy = next.y - p.y;
+        {/* Line segments — rotate around each segment's own center.
+            (RN's default transform origin is center; using `left center`
+            is not supported on RN < 0.74 and silently breaks the chart.) */}
+        {segments.map((s, i) => {
+          const dx = s.x2 - s.x1;
+          const dy = s.y2 - s.y1;
           const length = Math.sqrt(dx * dx + dy * dy);
           const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+          const midX = (s.x1 + s.x2) / 2;
+          const midY = (s.y1 + s.y2) / 2;
           return (
             <View
               key={`line-${i}`}
               style={{
                 position: 'absolute',
-                left: p.x,
-                top: p.y,
+                left: midX - length / 2,
+                top: midY - 1.25,
                 width: length,
                 height: 2.5,
                 backgroundColor: colors.teal,
-                transformOrigin: 'left center',
                 transform: [{ rotate: `${angle}deg` }],
               }}
             />
@@ -283,7 +319,17 @@ function LineChart({ points }: { points: ChartPoint[] }) {
         {points.map((p, i) => (
           <Text
             key={i}
-            style={[styles.axisLabelX, { flex: 1, textAlign: i === 0 ? 'left' : i === points.length - 1 ? 'right' : 'center' }]}
+            numberOfLines={1}
+            style={[
+              styles.axisLabelX,
+              {
+                flex: 1,
+                textAlign:
+                  i === 0 ? 'left'
+                  : i === points.length - 1 ? 'right'
+                  : 'center',
+              },
+            ]}
           >
             {p.label}
           </Text>
@@ -295,45 +341,58 @@ function LineChart({ points }: { points: ChartPoint[] }) {
 
 // ── Data builders ─────────────────────────────────────────────────────────────
 
-function buildLinePoints(entries: Entry[], filter: TimeFilter, startDate: Date): ChartPoint[] {
+function buildLinePoints(
+  entries: Entry[],
+  filter: TimeFilter,
+  startDate: Date,
+  now: Date,
+): ChartPoint[] {
   if (entries.length === 0) return [];
-  const now = new Date();
   const points: ChartPoint[] = [];
+  const dayKey = (d: Date) =>
+    `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 
   if (filter === 'week') {
+    // Always emit 7 buckets (startDate .. startDate+6); score is null if no data.
     for (let i = 0; i < 7; i++) {
       const day = new Date(startDate);
       day.setDate(startDate.getDate() + i);
-      const key = day.toISOString().split('T')[0];
-      const dayEntries = entries.filter(
-        (e) => e.createdAt.toISOString().split('T')[0] === key
-      );
-      if (dayEntries.length > 0) {
-        const avg = dayEntries.reduce((s, e) => s + (MOOD_SCORE[e.mood ?? ''] ?? 3), 0) / dayEntries.length;
-        points.push({
-          label: day.toLocaleDateString('en-NZ', { weekday: 'short' }),
-          score: Math.round(avg * 10) / 10,
-        });
-      }
+      const key = dayKey(day);
+      const dayEntries = entries.filter((e) => dayKey(e.createdAt) === key);
+      const score =
+        dayEntries.length > 0
+          ? Math.round(
+              (dayEntries.reduce((s, e) => s + (MOOD_SCORE[e.mood ?? ''] ?? 3), 0) /
+                dayEntries.length) * 10,
+            ) / 10
+          : null;
+      points.push({
+        label: day.toLocaleDateString('en-NZ', { weekday: 'narrow' }),
+        score,
+      });
     }
   } else {
+    // Group by year-month, then walk month-by-month from startDate to now.
     const monthMap: Record<string, number[]> = {};
     entries.forEach((e) => {
       const key = `${e.createdAt.getFullYear()}-${e.createdAt.getMonth()}`;
       if (!monthMap[key]) monthMap[key] = [];
       monthMap[key].push(MOOD_SCORE[e.mood ?? ''] ?? 3);
     });
+
     const current = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
-    while (current <= now) {
+    const end = new Date(now.getFullYear(), now.getMonth(), 1);
+    while (current <= end) {
       const key = `${current.getFullYear()}-${current.getMonth()}`;
       const scores = monthMap[key];
-      if (scores && scores.length > 0) {
-        const avg = scores.reduce((s, n) => s + n, 0) / scores.length;
-        points.push({
-          label: current.toLocaleDateString('en-NZ', { month: 'short' }),
-          score: Math.round(avg * 10) / 10,
-        });
-      }
+      const score =
+        scores && scores.length > 0
+          ? Math.round((scores.reduce((s, n) => s + n, 0) / scores.length) * 10) / 10
+          : null;
+      points.push({
+        label: current.toLocaleDateString('en-NZ', { month: 'short' }),
+        score,
+      });
       current.setMonth(current.getMonth() + 1);
     }
   }
@@ -346,6 +405,7 @@ function buildDistribution(entries: Entry[]) {
     if (e.mood) counts[e.mood] = (counts[e.mood] ?? 0) + 1;
   });
   const total = entries.length;
+  if (total === 0) return [];
   return Object.entries(counts)
     .map(([mood, count]) => ({ mood, count, pct: Math.round((count / total) * 100) }))
     .sort((a, b) => b.count - a.count);

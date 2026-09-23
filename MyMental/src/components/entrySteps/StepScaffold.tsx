@@ -4,8 +4,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
-import { colors, fonts, spacing, radius } from '../../constants/theme';
-import { EntryStepKey, getStepPosition } from '../../constants/entrySteps';
+import {
+  colors,
+  fonts,
+  spacing,
+  radius,
+} from '../../constants/theme';
+
+import {
+  EntryStepKey,
+  getPreviousStepRoute,
+  getStepPosition,
+} from '../../constants/entrySteps';
 
 type StepScaffoldProps = {
   stepKey: EntryStepKey;
@@ -19,10 +29,22 @@ type StepScaffoldProps = {
   continueDisabled?: boolean;
   centerContent?: boolean;
   children: React.ReactNode;
+
+  entryDate?: string;
 };
 
-function formatToday() {
-  return new Date().toLocaleDateString('en-NZ', {
+function formatEntryDate(entryDate?: string) {
+  if (!entryDate) {
+    return new Date().toLocaleDateString('en-NZ', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    });
+  }
+
+  const [year, month, day] = entryDate.split('-').map(Number);
+
+  return new Date(year, month - 1, day).toLocaleDateString('en-NZ', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -41,16 +63,30 @@ export default function StepScaffold({
   continueDisabled,
   centerContent = true,
   children,
+  entryDate,
 }: StepScaffoldProps) {
   const { current, total } = getStepPosition(stepKey);
   const isFirstStep = current === 1;
+
+  const handleBack = () => {
+    if (isFirstStep) {
+      onClose?.();
+      return;
+    }
+
+    const previous = getPreviousStepRoute(stepKey);
+
+    if (previous) {
+      router.replace(previous);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.container}>
         <View style={styles.topBar}>
           <TouchableOpacity
-            onPress={isFirstStep ? onClose : () => router.back()}
+            onPress={handleBack}
             hitSlop={10}
             style={styles.navButton}
           >
@@ -61,7 +97,9 @@ export default function StepScaffold({
             />
           </TouchableOpacity>
 
-          <Text style={styles.dateText}>{formatToday()}</Text>
+          <Text style={styles.dateText}>
+            {formatEntryDate(entryDate)}
+          </Text>
 
           <View style={styles.navButton}>
             {skippable && (
@@ -96,7 +134,9 @@ export default function StepScaffold({
             <Text style={styles.subtitle}>{subtitle}</Text>
           ) : null}
 
-          <View style={styles.stepBody}>{children}</View>
+          <View style={styles.stepBody}>
+            {children}
+          </View>
         </View>
 
         <View style={styles.footer}>
@@ -170,7 +210,6 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: spacing.xl,
-
   },
 
   contentCentered: {
