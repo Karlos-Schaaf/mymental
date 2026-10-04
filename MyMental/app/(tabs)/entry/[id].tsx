@@ -104,11 +104,9 @@ export default function EntryScreen() {
     if (!entry) return;
 
     /*
-     * Load the entire existing entry into the shared
-     * entry flow before opening the first step.
-     *
-     * Because the entry keeps its id, the final Save
-     * will update this entry instead of creating a new one.
+     * Existing entries always enter the full edit flow.
+     * The edit flow is independent of the user's current
+     * journaling settings.
      */
     startEdit(entry);
 
@@ -214,6 +212,40 @@ export default function EntryScreen() {
     ? MOOD_CONFIG[entry.mood]
     : null;
 
+  /*
+   * When viewing an existing entry, display every value that
+   * was actually saved with that entry.
+   *
+   * Current journaling settings and the entry's historical
+   * trackingOptions do not control the display.
+   */
+  const showMood =
+    entry.mood !== undefined;
+
+  const showMetrics =
+    entry.stress !== undefined ||
+    entry.energy !== undefined ||
+    entry.sleepHours !== undefined ||
+    entry.physicalActivity !== undefined ||
+    entry.socialInteraction !== undefined ||
+    entry.productivity !== undefined ||
+    entry.screenTime !== undefined;
+
+  /*
+   * Journal text is always displayed — even if the user didn't
+   * type a title or content — so the saved entry reads as a
+   * structured document.
+   *
+   * - Title falls back to the entry's date + time.
+   * - Content falls back to a short placeholder.
+   */
+  const displayTitle =
+    entry.title?.trim() ||
+    ('No saved title');
+
+  const displayContent =
+    entry.content?.trim() || 'No written notes.';
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.container}>
@@ -265,7 +297,7 @@ export default function EntryScreen() {
 
           {/* Mood */}
 
-          {mood ? (
+          {showMood && mood ? (
             <View style={styles.moodCard}>
               <View
                 style={[
@@ -301,93 +333,95 @@ export default function EntryScreen() {
             </View>
           ) : null}
 
-          {/* Title */}
+          {/* Title box */}
 
-          {entry.title ? (
-            <Text style={styles.title}>
-              {entry.title}
+          <View style={styles.titleBox}>
+            <Text style={styles.boxLabel}>
+              TITLE
             </Text>
-          ) : null}
 
-          {/* Content */}
+            <Text style={styles.titleBoxText}>
+              {displayTitle}
+            </Text>
+          </View>
 
-          <Text style={styles.content}>
-            {entry.content || 'No written notes.'}
-          </Text>
+          {/* Content box */}
+
+          <View style={styles.contentBox}>
+            <Text style={styles.boxLabel}>
+              ENTRY
+            </Text>
+
+            <Text style={styles.contentBoxText}>
+              {displayContent}
+            </Text>
+          </View>
 
           {/* Metrics */}
 
-          {(
-  entry.stress !== undefined ||
-  entry.energy !== undefined ||
-  entry.sleepHours !== undefined ||
-  entry.physicalActivity !== undefined ||
-  entry.socialInteraction !== undefined ||
-  entry.productivity !== undefined ||
-  entry.screenTime !== undefined
-) ? (
+          {showMetrics ? (
             <View style={styles.metricsSection}>
               <Text style={styles.sectionTitle}>
                 Check-in
               </Text>
 
               <View style={styles.metrics}>
-  {entry.stress !== undefined ? (
-    <Metric
-      icon="pulse-outline"
-      label="Stress"
-      value={`${entry.stress}/10`}
-    />
-  ) : null}
+                {entry.stress !== undefined ? (
+                  <Metric
+                    icon="pulse-outline"
+                    label="Stress"
+                    value={`${entry.stress}/10`}
+                  />
+                ) : null}
 
-  {entry.energy !== undefined ? (
-    <Metric
-      icon="flash-outline"
-      label="Energy"
-      value={`${entry.energy}/10`}
-    />
-  ) : null}
+                {entry.energy !== undefined ? (
+                  <Metric
+                    icon="flash-outline"
+                    label="Energy"
+                    value={`${entry.energy}/10`}
+                  />
+                ) : null}
 
-  {entry.sleepHours !== undefined ? (
-    <Metric
-      icon="moon-outline"
-      label="Sleep"
-      value={`${entry.sleepHours} hrs`}
-    />
-  ) : null}
+                {entry.sleepHours !== undefined ? (
+                  <Metric
+                    icon="moon-outline"
+                    label="Sleep"
+                    value={`${entry.sleepHours} hrs`}
+                  />
+                ) : null}
 
-  {entry.physicalActivity !== undefined ? (
-    <Metric
-      icon="fitness-outline"
-      label="Physical Activity"
-      value={`${entry.physicalActivity}/10`}
-    />
-  ) : null}
+                {entry.physicalActivity !== undefined ? (
+                  <Metric
+                    icon="fitness-outline"
+                    label="Physical Activity"
+                    value={`${entry.physicalActivity}/10`}
+                  />
+                ) : null}
 
-  {entry.socialInteraction !== undefined ? (
-    <Metric
-      icon="people-outline"
-      label="Social Interaction"
-      value={`${entry.socialInteraction}/10`}
-    />
-  ) : null}
+                {entry.socialInteraction !== undefined ? (
+                  <Metric
+                    icon="people-outline"
+                    label="Social Interaction"
+                    value={`${entry.socialInteraction}/10`}
+                  />
+                ) : null}
 
-  {entry.productivity !== undefined ? (
-    <Metric
-      icon="checkmark-circle-outline"
-      label="Productivity"
-      value={`${entry.productivity}/10`}
-    />
-  ) : null}
+                {entry.productivity !== undefined ? (
+                  <Metric
+                    icon="checkmark-circle-outline"
+                    label="Productivity"
+                    value={`${entry.productivity}/10`}
+                  />
+                ) : null}
 
-  {entry.screenTime !== undefined ? (
-    <Metric
-      icon="phone-portrait-outline"
-      label="Screen Time"
-      value={`${entry.screenTime} hrs`}
-    />
-  ) : null}
-</View>
+                {entry.screenTime !== undefined ? (
+                  <Metric
+                    icon="phone-portrait-outline"
+                    label="Screen Time"
+                    value={`${entry.screenTime} hrs`}
+                  />
+                ) : null}
+              </View>
             </View>
           ) : null}
 
@@ -533,20 +567,48 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  title: {
-    fontFamily: fonts.serif,
-    fontSize: 28,
-    lineHeight: 35,
-    color: colors.ink,
+  // ── Boxed title + content ──
+
+  boxLabel: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 10,
+    letterSpacing: 1.2,
+    color: colors.muted,
+    marginBottom: spacing.xs,
+  },
+
+  titleBox: {
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     marginTop: spacing.xl,
   },
 
-  content: {
+  titleBoxText: {
+    fontFamily: fonts.serif,
+    fontSize: 24,
+    lineHeight: 31,
+    color: colors.ink,
+  },
+
+  contentBox: {
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    marginTop: spacing.md,
+  },
+
+  contentBoxText: {
     fontFamily: fonts.sans,
     fontSize: 16,
     lineHeight: 26,
     color: colors.ink,
-    marginTop: spacing.lg,
   },
 
   metricsSection: {

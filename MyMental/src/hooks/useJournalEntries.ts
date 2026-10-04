@@ -1,8 +1,3 @@
-// src/hooks/useJournalEntries.ts
-
-// Journal entries hook — reads and writes to Firebase Firestore
-// Entries are stored under users/{uid}/entries/ and tied to the logged-in user
-
 import { useState, useEffect, useCallback } from 'react';
 
 import { auth } from '../firebase/auth';
@@ -13,6 +8,7 @@ import {
   updateJournalEntry,
   deleteJournalEntry,
   FirestoreJournalEntry,
+  JournalTrackingOption,
 } from '../firebase/firestore';
 
 import { Timestamp } from 'firebase/firestore';
@@ -38,6 +34,10 @@ export type JournalEntry = {
   socialInteraction?: number; // 0–10
   productivity?: number; // 0–10
   screenTime?: number; // 0–12 hrs
+
+  // The journaling settings that were active
+  // when this entry was created.
+  trackingOptions?: JournalTrackingOption[];
 
   createdAt: string; // ISO string for UI use
 };
@@ -68,7 +68,9 @@ export function getMoodColor(mood?: string): string {
 
 // Convert Firestore entry to local JournalEntry shape
 
-function fromFirestore(doc: FirestoreJournalEntry): JournalEntry {
+function fromFirestore(
+  doc: FirestoreJournalEntry,
+): JournalEntry {
   const createdAt =
     doc.createdAt instanceof Timestamp
       ? doc.createdAt.toDate().toISOString()
@@ -88,14 +90,23 @@ function fromFirestore(doc: FirestoreJournalEntry): JournalEntry {
     socialInteraction: doc.socialInteraction,
     productivity: doc.productivity,
     screenTime: doc.screenTime,
+
+    // Preserve the settings that belonged to this entry.
+    trackingOptions: doc.trackingOptions,
+
     createdAt,
   };
 }
 
 export function useJournalEntries() {
-  const [entries, setEntries] = useState<JournalEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [entries, setEntries] =
+    useState<JournalEntry[]>([]);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [error, setError] =
+    useState<string | null>(null);
 
   const uid = auth.currentUser?.uid;
 
@@ -121,7 +132,8 @@ export function useJournalEntries() {
           setError(null);
         }
 
-        const docs = await getJournalEntries(uid);
+        const docs =
+          await getJournalEntries(uid);
 
         if (!cancelled) {
           setEntries(docs.map(fromFirestore));
@@ -131,7 +143,10 @@ export function useJournalEntries() {
           setError('Failed to load entries.');
         }
 
-        console.error('useJournalEntries load error:', e);
+        console.error(
+          'useJournalEntries load error:',
+          e,
+        );
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -160,11 +175,17 @@ export function useJournalEntries() {
       setLoading(true);
       setError(null);
 
-      const docs = await getJournalEntries(uid);
+      const docs =
+        await getJournalEntries(uid);
+
       setEntries(docs.map(fromFirestore));
     } catch (e) {
       setError('Failed to load entries.');
-      console.error('useJournalEntries refresh error:', e);
+
+      console.error(
+        'useJournalEntries refresh error:',
+        e,
+      );
     } finally {
       setLoading(false);
     }
@@ -172,7 +193,9 @@ export function useJournalEntries() {
 
   // Add a new entry — saves to Firestore and updates local state
 
-  const addEntry = async (entry: Omit<JournalEntry, 'id'>) => {
+  const addEntry = async (
+    entry: Omit<JournalEntry, 'id'>,
+  ) => {
     if (!uid) return;
 
     try {
@@ -189,6 +212,10 @@ export function useJournalEntries() {
         socialInteraction: entry.socialInteraction,
         productivity: entry.productivity,
         screenTime: entry.screenTime,
+
+        // Save the settings snapshot with the entry.
+        trackingOptions: entry.trackingOptions,
+
         createdAt: new Date(entry.createdAt),
       });
 
@@ -197,42 +224,69 @@ export function useJournalEntries() {
         id,
       };
 
-      setEntries((prev) => [newEntry, ...prev]);
+      setEntries((prev) => [
+        newEntry,
+        ...prev,
+      ]);
     } catch (e) {
       setError('Failed to save entry.');
-      console.error('useJournalEntries addEntry error:', e);
+
+      console.error(
+        'useJournalEntries addEntry error:',
+        e,
+      );
     }
   };
 
   // Update an existing entry — saves to Firestore and updates local state
 
-  const updateEntry = async (updated: JournalEntry) => {
+  const updateEntry = async (
+    updated: JournalEntry,
+  ) => {
     if (!uid) return;
 
     try {
       setError(null);
 
-      await updateJournalEntry(uid, updated.id, {
-        title: updated.title,
-        body: updated.content,
-        mood: updated.mood,
-        stress: updated.stress,
-        energy: updated.energy,
-        sleepHours: updated.sleepHours,
-        physicalActivity: updated.physicalActivity,
-        socialInteraction: updated.socialInteraction,
-        productivity: updated.productivity,
-        screenTime: updated.screenTime,
-      });
+      await updateJournalEntry(
+        uid,
+        updated.id,
+        {
+          title: updated.title,
+          body: updated.content,
+          mood: updated.mood,
+          stress: updated.stress,
+          energy: updated.energy,
+          sleepHours: updated.sleepHours,
+          physicalActivity:
+            updated.physicalActivity,
+          socialInteraction:
+            updated.socialInteraction,
+          productivity:
+            updated.productivity,
+          screenTime:
+            updated.screenTime,
+
+          // Preserve/update the settings snapshot.
+          trackingOptions:
+            updated.trackingOptions,
+        },
+      );
 
       setEntries((prev) =>
         prev.map((entry) =>
-          entry.id === updated.id ? updated : entry,
+          entry.id === updated.id
+            ? updated
+            : entry,
         ),
       );
     } catch (e) {
       setError('Failed to update entry.');
-      console.error('useJournalEntries updateEntry error:', e);
+
+      console.error(
+        'useJournalEntries updateEntry error:',
+        e,
+      );
     }
   };
 
@@ -244,21 +298,32 @@ export function useJournalEntries() {
     try {
       setError(null);
 
-      await deleteJournalEntry(uid, id);
+      await deleteJournalEntry(
+        uid,
+        id,
+      );
 
       setEntries((prev) =>
-        prev.filter((entry) => entry.id !== id),
+        prev.filter(
+          (entry) => entry.id !== id,
+        ),
       );
     } catch (e) {
       setError('Failed to delete entry.');
-      console.error('useJournalEntries deleteEntry error:', e);
+
+      console.error(
+        'useJournalEntries deleteEntry error:',
+        e,
+      );
     }
   };
 
   // Find an entry by ID
 
   const getEntry = (id: string) =>
-    entries.find((entry) => entry.id === id);
+    entries.find(
+      (entry) => entry.id === id,
+    );
 
   return {
     entries,

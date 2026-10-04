@@ -5,6 +5,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { colors, fonts } from "../../src/constants/theme";
 
+import { JournalingPreferencesProvider } from "../../src/context/JournalPreferencesContext";
+
 type TabIconProps = {
   icon: keyof typeof Ionicons.glyphMap;
   outlineIcon: keyof typeof Ionicons.glyphMap;
@@ -24,7 +26,11 @@ function TabIcon({
         name={focused ? icon : outlineIcon}
         size={30}
         paddingTop={1}
-        color={focused ? colors.primary : colors.mutedLight}
+        color={
+          focused
+            ? colors.primary
+            : colors.mutedLight
+        }
       />
 
       <Text
@@ -40,117 +46,114 @@ function TabIcon({
   );
 }
 
-
 export default function TabsLayout() {
   return (
-    
-    <SafeAreaView
-  style={{ flex: 1, backgroundColor: colors.white }}
-  edges={["bottom"]}
->
-      
-      <Tabs
-        screenOptions={{
-          headerShown: false,
-          tabBarShowLabel: false,
-          tabBarStyle: styles.tabBar,
-          tabBarItemStyle: {
-            flex: 1,
-          },
+    <JournalingPreferencesProvider>
+      <SafeAreaView
+        style={{
+          flex: 1,
+          backgroundColor: colors.white,
         }}
+        edges={["bottom"]}
       >
-        <Tabs.Screen
-          name="index"
-          options={{
-            tabBarIcon: ({ focused }) => (
-              <TabIcon
-                icon="home"
-                outlineIcon="home-outline"
-                label="Home"
-                focused={focused}
-              />
-            ),
+        <Tabs
+          screenOptions={{
+            headerShown: false,
+            tabBarShowLabel: false,
+            tabBarStyle: styles.tabBar,
+            tabBarItemStyle: {
+              flex: 1,
+            },
           }}
-        />
+        >
+          <Tabs.Screen
+            name="index"
+            options={{
+              tabBarIcon: ({ focused }) => (
+                <TabIcon
+                  icon="home"
+                  outlineIcon="home-outline"
+                  label="Home"
+                  focused={focused}
+                />
+              ),
+            }}
+          />
 
-        <Tabs.Screen
-          name="journal"
-          options={{
-            tabBarIcon: ({ focused }) => (
-              <TabIcon
-                icon="book"
-                outlineIcon="book-outline"
-                label="Journal"
-                focused={focused}
-              />
-            ),
-          }}
-        />
+          <Tabs.Screen
+            name="journal"
+            options={{
+              tabBarIcon: ({ focused }) => (
+                <TabIcon
+                  icon="book"
+                  outlineIcon="book-outline"
+                  label="Journal"
+                  focused={focused}
+                />
+              ),
+            }}
+          />
 
-        <Tabs.Screen
-          name="insights"
-          options={{
-            tabBarIcon: ({ focused }) => (
-              <TabIcon
-                icon="analytics"
-                outlineIcon="analytics-outline"
-                label="Insights"
-                focused={focused}
-              />
-            ),
-          }}
-        />
+          <Tabs.Screen
+            name="insights"
+            options={{
+              tabBarIcon: ({ focused }) => (
+                <TabIcon
+                  icon="analytics"
+                  outlineIcon="analytics-outline"
+                  label="Insights"
+                  focused={focused}
+                />
+              ),
+            }}
+          />
 
-        <Tabs.Screen
-          name="resources"
-          options={{
-            tabBarIcon: ({ focused }) => (
-              <TabIcon
-                icon="library"
-                outlineIcon="library-outline"
-                label="Resources"
-                focused={focused}
-              />
-            ),
-          }}
-        />
+          <Tabs.Screen
+            name="resources"
+            options={{
+              tabBarIcon: ({ focused }) => (
+                <TabIcon
+                  icon="library"
+                  outlineIcon="library-outline"
+                  label="Resources"
+                  focused={focused}
+                />
+              ),
+            }}
+          />
 
-        <Tabs.Screen
-          name="profile"
-          options={{
-            tabBarIcon: ({ focused }) => (
-              <TabIcon
-                icon="person"
-                outlineIcon="person-outline"
-                label="Profile"
-                focused={focused}
-              />
-            ),
-          }}
-        />
+          <Tabs.Screen
+            name="profile"
+            options={{
+              tabBarIcon: ({ focused }) => (
+                <TabIcon
+                  icon="person"
+                  outlineIcon="person-outline"
+                  label="Profile"
+                  focused={focused}
+                />
+              ),
+            }}
+          />
 
-        <Tabs.Screen
-  name="entry"
-  options={{
-    href: null,
-  }}
-/>
-
-
-
-      </Tabs>
-    </SafeAreaView>
-
+          <Tabs.Screen
+            name="entry"
+            options={{
+              href: null,
+            }}
+          />
+        </Tabs>
+      </SafeAreaView>
+    </JournalingPreferencesProvider>
   );
 }
-
 
 const styles = StyleSheet.create({
   tabBar: {
     backgroundColor: colors.white,
     borderTopColor: colors.border,
     borderTopWidth: 1,
-    height: 55, // Increased height to accommodate multi-line text
+    height: 55,
     paddingTop: 20,
     paddingBottom: 0,
   },
@@ -161,7 +164,7 @@ const styles = StyleSheet.create({
     width: "100%",
     flex: 1,
     minWidth: 200,
-    },
+  },
 
   tabLabel: {
     fontFamily: fonts.sans,

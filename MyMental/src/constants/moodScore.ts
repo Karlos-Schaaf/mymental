@@ -8,10 +8,10 @@ import type { MoodLevel } from '../hooks/useJournalEntries';
 // the entry instead and this file becomes unnecessary.
 
 export const MOOD_SCORES: Record<MoodLevel, number> = {
-  very_bad: 2,
-  bad: 4,
-  neutral: 6,
-  good: 8,
+  very_bad: 0,
+  bad: 2.5,
+  neutral: 5,
+  good: 7.5,
   great: 10,
 };
 

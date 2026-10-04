@@ -1,14 +1,27 @@
 import React from 'react';
-import { router, useLocalSearchParams } from 'expo-router';
+import {
+  router,
+  useFocusEffect,
+  useLocalSearchParams,
+} from 'expo-router';
 
 import StepScaffold from '../../../src/components/entrySteps/StepScaffold';
 import MoodStep from '../../../src/components/entrySteps/MoodStep';
+
 import { useNewEntry } from '../../../src/context/NewEntryContext';
-import { getNextStepRoute } from '../../../src/constants/entrySteps';
+
+import {
+  getEntrySteps,
+  getNextStepRoute,
+} from '../../../src/constants/entrySteps';
+
 import { MoodLevel } from '../../../src/hooks/useJournalEntries';
 
+import { useJournalingPreferences } from '../../../src/context/JournalPreferencesContext';
+
 export default function MoodStepScreen() {
-  const { date } = useLocalSearchParams<{ date?: string }>();
+  const { date } =
+    useLocalSearchParams<{ date?: string }>();
 
   const {
     draft,
@@ -16,22 +29,84 @@ export default function MoodStepScreen() {
     resetDraft,
   } = useNewEntry();
 
-  const selectedDate = Array.isArray(date) ? date[0] : date;
+  const {
+    trackingOptions: currentTrackingOptions,
+    loading: preferencesLoading,
+  } = useJournalingPreferences();
 
-  React.useEffect(() => {
-    if (selectedDate && draft.entryDate !== selectedDate) {
-      updateDraft({
-        entryDate: selectedDate,
-      });
-    }
-  }, [selectedDate, draft.entryDate, updateDraft]);
+  /*
+   * For an existing entry, use the tracking options that were
+   * saved with that entry.
+   *
+   * For a brand-new entry, fall back to the user's current
+   * journaling settings.
+   */
+  const trackingOptions =
+    draft.trackingOptions ?? currentTrackingOptions;
+
+  const selectedDate = Array.isArray(date)
+    ? date[0]
+    : date;
+
+  /*
+   * Sync the route's date param into the shared draft.
+   *
+   * This must only run while THIS screen is focused. Expo Router
+   * keeps earlier screens mounted underneath the current one, so a
+   * Mood screen left over from a previous (back-dated) entry still
+   * holds its old `date` param. With a plain useEffect, that stale
+   * screen and the visible one would each overwrite draft.entryDate
+   * with their own date, re-triggering each other forever
+   * ("Maximum update depth exceeded").
+   */
+  useFocusEffect(
+    React.useCallback(() => {
+      if (
+        selectedDate &&
+        draft.entryDate !== selectedDate
+      ) {
+        updateDraft({
+          entryDate: selectedDate,
+        });
+      }
+    }, [
+      selectedDate,
+      draft.entryDate,
+      updateDraft,
+    ]),
+  );
 
   const handleSelect = (mood: MoodLevel) => {
     updateDraft({ mood });
   };
 
   const handleContinue = () => {
-    const next = getNextStepRoute('mood');
+    console.log(
+      'ENTRY TRACKING OPTIONS:',
+      trackingOptions,
+    );
+
+    console.log(
+      'ENTRY STEPS:',
+      getEntrySteps(trackingOptions),
+    );
+
+    if (
+      preferencesLoading &&
+      !draft.trackingOptions
+    ) {
+      return;
+    }
+
+    const next = getNextStepRoute(
+      'mood',
+      trackingOptions,
+    );
+
+    console.log(
+      'NEXT ROUTE:',
+      next,
+    );
 
     if (next) {
       router.push(next);
@@ -40,7 +115,14 @@ export default function MoodStepScreen() {
 
   const handleClose = () => {
     resetDraft();
-    router.replace('/journal');
+
+    // Leave the whole entry flow, rather than replacing just this
+    // screen, so no step screens stay mounted underneath.
+    if (router.canDismiss()) {
+      router.dismissAll();
+    } else {
+      router.replace('/journal');
+    }
   };
 
   return (
@@ -51,8 +133,11 @@ export default function MoodStepScreen() {
       skippable={false}
       onContinue={handleContinue}
       onClose={handleClose}
-      continueDisabled={!draft.mood}
-      entryDate={draft.entryDate}
+      continueDisabled={
+        !draft.mood ||
+        (preferencesLoading &&
+          !draft.trackingOptions)
+      }
     >
       <MoodStep
         value={draft.mood}

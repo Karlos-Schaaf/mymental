@@ -10,47 +10,46 @@ import {
   MoodLevel,
 } from '../hooks/useJournalEntries';
 
+import {
+  JournalTrackingOption,
+} from '../firebase/firestore';
+
 export type EntryDraft = {
-  // Present when editing an existing entry.
-  // Absent when creating a new entry.
   id?: string;
-
-  // YYYY-MM-DD date selected by the user.
   entryDate?: string;
-
-  // Original timestamp, preserved when editing.
   createdAt?: string;
 
   mood?: MoodLevel;
-
   sleepHours?: number;
-
   physicalActivity?: number;
-
   socialInteraction?: number;
-
   productivity?: number;
-
   screenTime?: number;
-
   stress?: number;
-
   energy?: number;
 
   title?: string;
-
   content?: string;
-};
 
+  // Settings used by this specific entry
+  trackingOptions?: JournalTrackingOption[];
+};
 
 type NewEntryContextValue = {
   draft: EntryDraft;
 
-  updateDraft: (patch: Partial<EntryDraft>) => void;
+  updateDraft: (
+    patch: Partial<EntryDraft>
+  ) => void;
 
-  startNew: (entryDate?: string) => void;
+  startNew: (
+    entryDate?: string,
+    trackingOptions?: JournalTrackingOption[],
+  ) => void;
 
-  startEdit: (entry: JournalEntry) => void;
+  startEdit: (
+    entry: JournalEntry
+  ) => void;
 
   resetDraft: () => void;
 };
@@ -64,11 +63,13 @@ const EMPTY_DRAFT: EntryDraft = {};
 
 function getLocalDateKey(date: Date): string {
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(
-    2,
-    '0',
-  );
-  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(
+    date.getMonth() + 1,
+  ).padStart(2, '0');
+
+  const day = String(
+    date.getDate(),
+  ).padStart(2, '0');
 
   return `${year}-${month}-${day}`;
 }
@@ -81,9 +82,6 @@ export function NewEntryProvider({
   const [draft, setDraft] =
     useState<EntryDraft>(EMPTY_DRAFT);
 
-  /**
-   * Update one or more values in the current entry flow.
-   */
   const updateDraft = useCallback(
     (patch: Partial<EntryDraft>) => {
       setDraft((previous) => ({
@@ -94,27 +92,25 @@ export function NewEntryProvider({
     [],
   );
 
-  /**
-   * Start a completely new journal entry.
-   *
-   * No id means this entry will eventually be created
-   * with addEntry().
-   */
+  // Start a completely new entry using the
+  // journaling settings active at that moment.
   const startNew = useCallback(
-    (entryDate?: string) => {
+    (
+      entryDate?: string,
+      trackingOptions?: JournalTrackingOption[],
+    ) => {
       setDraft({
         entryDate,
+        trackingOptions: trackingOptions
+          ? [...trackingOptions]
+          : undefined,
       });
     },
     [],
   );
 
-  /**
-   * Start editing an existing journal entry.
-   *
-   * Keeping the existing id means the final save can
-   * call updateEntry() instead of creating a new entry.
-   */
+  // When editing an existing entry, restore the
+  // settings that were used when that entry was created.
   const startEdit = useCallback(
     (entry: JournalEntry) => {
       setDraft({
@@ -123,6 +119,8 @@ export function NewEntryProvider({
         entryDate: getLocalDateKey(
           new Date(entry.createdAt),
         ),
+
+        createdAt: entry.createdAt,
 
         mood: entry.mood,
         sleepHours: entry.sleepHours,
@@ -135,16 +133,15 @@ export function NewEntryProvider({
 
         title: entry.title,
         content: entry.content,
+
+        trackingOptions: entry.trackingOptions
+          ? [...entry.trackingOptions]
+          : undefined,
       });
     },
     [],
   );
 
-  /**
-   * Completely clear the current entry flow.
-   *
-   * Used after saving, cancelling, or closing the flow.
-   */
   const resetDraft = useCallback(() => {
     setDraft(EMPTY_DRAFT);
   }, []);
@@ -165,7 +162,9 @@ export function NewEntryProvider({
 }
 
 export function useNewEntry() {
-  const context = useContext(NewEntryContext);
+  const context = useContext(
+    NewEntryContext,
+  );
 
   if (!context) {
     throw new Error(

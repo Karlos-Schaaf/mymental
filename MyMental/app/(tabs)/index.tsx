@@ -1,4 +1,5 @@
 import React, {
+  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -10,11 +11,13 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import {
+  router,
+  useFocusEffect,
+} from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import {
@@ -34,6 +37,8 @@ import {
 } from '../../src/hooks/useJournalEntries';
 
 import MoodRing from '../../src/components/MoodRing';
+import TrackingWidgets from '../../src/components/trackingWidgets';
+import { useTrackingOptions } from '../../src/hooks/useTrackingOptions';
 import MoodCalendar from '../../src/components/MoodCalendar';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -44,11 +49,12 @@ function average(values: number[]): number | null {
   }
 
   return (
-    values.reduce((sum, value) => sum + value, 0) /
-    values.length
+    values.reduce(
+      (sum, value) => sum + value,
+      0,
+    ) / values.length
   );
 }
-
 function useDashboardStats(
   entries: JournalEntry[],
   now: number,
@@ -71,6 +77,26 @@ function useDashboardStats(
         diff <= 14 * DAY_MS
       );
     });
+
+    const today = new Date(now);
+
+    const todayYear = today.getFullYear();
+    const todayMonth = today.getMonth();
+    const todayDate = today.getDate();
+
+    const hasEntryToday = entries.some(
+      (entry) => {
+        const entryDate = new Date(
+          entry.createdAt,
+        );
+
+        return (
+          entryDate.getFullYear() === todayYear &&
+          entryDate.getMonth() === todayMonth &&
+          entryDate.getDate() === todayDate
+        );
+      },
+    );
 
     const moodScores = (
       list: JournalEntry[],
@@ -99,15 +125,6 @@ function useDashboardStats(
     const displayedMood =
       thisWeekMoodAvg ?? overallMoodAvg;
 
-    const thisWeekStressAvg = average(
-      thisWeek
-        .map((entry) => entry.stress)
-        .filter(
-          (stress): stress is number =>
-            stress !== undefined,
-        ),
-    );
-
     let moodTrend:
       | 'up'
       | 'down'
@@ -132,14 +149,14 @@ function useDashboardStats(
 
     return {
       hasAnyEntries: entries.length > 0,
+      hasEntryToday,
+      totalEntries: entries.length,
       displayedMood,
       moodTrend,
       checkins: thisWeek.length,
-      thisWeekStressAvg,
     };
   }, [entries, now]);
 }
-
 // Ticks `now` on a fixed interval so week boundaries stay
 // fresh without calling Date.now() during render.
 function useNow(
@@ -174,6 +191,16 @@ export default function HomeScreen() {
     error,
     refresh,
   } = useJournalEntries();
+
+  // Refresh the dashboard whenever the screen
+  // becomes active again.
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh]),
+  );
+
+  const trackingOptions = useTrackingOptions();
 
   const now = useNow();
 
@@ -214,6 +241,32 @@ export default function HomeScreen() {
       style={styles.safe}
       edges={['top']}
     >
+      {/* Header (fixed, matches Journal) */}
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.eyebrow}>
+            MY MENTAL
+          </Text>
+
+          <Text style={styles.headerTitle}>
+            Dashboard
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          style={styles.profileButton}
+          onPress={() => router.push('/profile')}
+          activeOpacity={0.8}
+          accessibilityLabel="Open profile"
+        >
+          <Ionicons
+            name="person"
+            size={22}
+            color={colors.white}
+          />
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         contentContainerStyle={
           styles.scrollContent
@@ -226,45 +279,6 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() =>
-              Alert.alert(
-                'Menu',
-                'Coming soon.',
-              )
-            }
-            hitSlop={8}
-          >
-            <Ionicons
-              name="menu-outline"
-              size={26}
-              color={colors.ink}
-            />
-          </TouchableOpacity>
-
-          <Text style={styles.headerTitle}>
-            Dashboard
-          </Text>
-
-          {/* Profile */}
-          <TouchableOpacity
-            onPress={() =>
-              router.push('/profile')
-            }
-            hitSlop={8}
-            accessibilityLabel="Open profile"
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name="person-circle-outline"
-              size={28}
-              color={colors.ink}
-            />
-          </TouchableOpacity>
-        </View>
-
         {/* Greeting */}
         <View style={styles.greetingBlock}>
           <Text style={styles.greeting}>
@@ -448,221 +462,94 @@ export default function HomeScreen() {
                 }
               />
             </View>
+            
 
-            {/* Stress + Check-ins */}
-            <View
-              style={styles.statsRow}
-            >
-              <View
-                style={styles.statCard}
-              >
-                <Ionicons
-                  name="trending-down"
-                  size={18}
-                  color={colors.teal}
-                />
+                {/* Daily Reflection */}
+<View style={styles.reflectionCard}>
+  <View style={styles.reflectionLeft}>
+    <Text style={styles.reflectionTitle}>
+      Daily Reflection
+    </Text>
 
-                <Text
-                  style={styles.cardLabel}
-                >
-                  Stress Level
-                </Text>
+    {stats.hasEntryToday ? (
+      <>
+        <Text style={styles.reflectionSubtitle}>
+          You&apos;ve logged your journal for today.
+        </Text>
 
-                <Text
-                  style={styles.statValue}
-                >
-                  {stats.thisWeekStressAvg !==
-                  null
-                    ? `${stats.thisWeekStressAvg.toFixed(
-                        1,
-                      )}/10`
-                    : '—'}
-                </Text>
+        <Text style={styles.reflectionCount}>
+          {stats.totalEntries}{' '}
+          {stats.totalEntries === 1
+            ? 'journal'
+            : 'journals'} logged
+        </Text>
 
-                <Text
-                  style={
-                    styles.statSubtitle
-                  }
-                >
-                  {stats.thisWeekStressAvg !==
-                  null
-                    ? 'Average this week'
-                    : 'Track stress to see your average'}
-                </Text>
-              </View>
+        <TouchableOpacity
+          style={styles.reflectionButton}
+          onPress={() =>
+            router.navigate('/journal')
+          }
+          activeOpacity={0.85}
+        >
+          <Text style={styles.reflectionButtonText}>
+            View Journal
+          </Text>
+        </TouchableOpacity>
+      </>
+    ) : (
+      <>
+        <Text style={styles.reflectionSubtitle}>
+          You haven&apos;t logged a journal today.
+        </Text>
 
-              <View
-                style={styles.statCard}
-              >
-                <Ionicons
-                  name="calendar-outline"
-                  size={18}
-                  color={colors.teal}
-                />
+        <Text style={styles.reflectionCount}>
+          {stats.totalEntries}{' '}
+          {stats.totalEntries === 1
+            ? 'journal'
+            : 'journals'} logged
+        </Text>
 
-                <Text
-                  style={styles.cardLabel}
-                >
-                  Check-ins
-                </Text>
+        <TouchableOpacity
+          style={styles.reflectionButton}
+          onPress={() =>
+            router.navigate('/journal')
+          }
+          activeOpacity={0.85}
+        >
+          <Text style={styles.reflectionButtonText}>
+            Log Today&apos;s Journal
+          </Text>
+        </TouchableOpacity>
+      </>
+    )}
+  </View>
 
-                <Text
-                  style={styles.statValue}
-                >
-                  {stats.checkins}
-                </Text>
+  <View style={styles.reflectionIllustration}>
+    <Ionicons
+      name={
+        stats.hasEntryToday
+          ? 'checkmark-circle-outline'
+          : 'book-outline'
+      }
+      size={30}
+      color={colors.teal}
+    />
+  </View>
+</View>
 
-                <Text
-                  style={
-                    styles.statSubtitle
-                  }
-                >
-                  This week
-                </Text>
-              </View>
-            </View>
+            {/* Tracking widgets (selected options, excl. mood + journal) */}
+            <TrackingWidgets
+              entries={entries}
+              selected={trackingOptions}
+              now={now}
+              checkins={stats.checkins}
+            />
           </>
         )}
 
-        {/* Daily Reflection */}
-        <View
-          style={styles.reflectionCard}
-        >
-          <View
-            style={styles.reflectionLeft}
-          >
-            <Text
-              style={styles.reflectionTitle}
-            >
-              Daily Reflection
-            </Text>
 
-            <Text
-              style={
-                styles.reflectionSubtitle
-              }
-            >
-              {stats.hasAnyEntries
-                ? 'Take a moment for yourself.'
-                : 'Write your first entry to get started.'}
-            </Text>
-
-            <TouchableOpacity
-              style={
-                styles.reflectionButton
-              }
-              onPress={() =>
-                router.navigate(
-                  '/journal',
-                )
-              }
-              activeOpacity={0.85}
-            >
-              <Text
-                style={
-                  styles.reflectionButtonText
-                }
-              >
-                Start Journaling
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Placeholder for the Figma illustration */}
-          <View
-            style={
-              styles.reflectionIllustration
-            }
-          >
-            <Ionicons
-              name="book-outline"
-              size={30}
-              color={colors.teal}
-            />
-          </View>
-        </View>
-
-        {/* Quick Actions */}
-        <Text
-          style={styles.sectionLabel}
-        >
-          Quick Actions
-        </Text>
-
-        <View
-          style={
-            styles.quickActionsRow
-          }
-        >
-          <QuickAction
-            icon="book-outline"
-            label="Journal"
-            onPress={() =>
-              router.push('/journal')
-            }
-          />
-
-          <QuickAction
-            icon="happy-outline"
-            label="Mood Check"
-            onPress={() =>
-              router.push('/journal')
-            }
-          />
-
-          <QuickAction
-            icon="bulb-outline"
-            label="Insights"
-            onPress={() =>
-              router.push('/insights')
-            }
-          />
-
-          <QuickAction
-            icon="heart-outline"
-            label="Resources"
-            onPress={() =>
-              router.push('/resources')
-            }
-          />
-        </View>
       </ScrollView>
     </SafeAreaView>
-  );
-}
-
-function QuickAction({
-  icon,
-  label,
-  onPress,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  onPress: () => void;
-}) {
-  return (
-    <TouchableOpacity
-      style={styles.quickAction}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      <View
-        style={styles.quickActionIcon}
-      >
-        <Ionicons
-          name={icon}
-          size={22}
-          color={colors.teal}
-        />
-      </View>
-
-      <Text
-        style={styles.quickActionLabel}
-        numberOfLines={1}
-      >
-        {label}
-      </Text>
-    </TouchableOpacity>
   );
 }
 
@@ -672,23 +559,44 @@ const styles = StyleSheet.create({
     backgroundColor: colors.paper,
   },
 
-  scrollContent: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xxl,
-    gap: spacing.lg,
-  },
-
   header: {
+    minHeight: 92,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+
+  eyebrow: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 11,
+    letterSpacing: 1.2,
+    color: colors.muted,
+    marginBottom: spacing.xs,
   },
 
   headerTitle: {
-    fontFamily: fonts.sansSemiBold,
-    fontSize: 18,
+    fontFamily: fonts.serif,
+    fontSize: 30,
     color: colors.ink,
+  },
+
+  profileButton: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.full,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  scrollContent: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xxl,
+    gap: spacing.lg,
   },
 
   greetingBlock: {
@@ -788,38 +696,15 @@ const styles = StyleSheet.create({
     color: colors.mutedLight,
   },
 
-  statsRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
 
-  statCard: {
-    flex: 1,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    gap: spacing.xs,
-  },
 
-  statValue: {
-    fontFamily: fonts.sansSemiBold,
-    fontSize: 22,
-    color: colors.ink,
-  },
 
-  statSubtitle: {
-    fontFamily: fonts.sans,
-    fontSize: 12,
-    color: colors.muted,
-  },
 
   reflectionCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.paperDim,
+    backgroundColor: colors.white,
     borderRadius: radius.lg,
     padding: spacing.lg,
     gap: spacing.md,
@@ -830,10 +715,18 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
 
+  reflectionCount: {
+  fontFamily: fonts.sansMedium,
+  fontSize: 12,
+  color: colors.muted,
+  marginBottom: spacing.xs,
+},
+  
   reflectionTitle: {
     fontFamily: fonts.sansSemiBold,
     fontSize: 16,
     color: colors.ink,
+    padding: 4,
   },
 
   reflectionSubtitle: {

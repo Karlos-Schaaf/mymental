@@ -1,6 +1,13 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+} from 'react-native';
+import {
+  SafeAreaView,
+} from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -13,9 +20,12 @@ import {
 
 import {
   EntryStepKey,
-  getPreviousStepRoute,
   getStepPosition,
+  getPreviousStepRoute,
 } from '../../constants/entrySteps';
+
+import { useNewEntry } from '../../context/NewEntryContext';
+import { useJournalingPreferences } from '../../hooks/useJournalingPreferences';
 
 type StepScaffoldProps = {
   stepKey: EntryStepKey;
@@ -29,8 +39,6 @@ type StepScaffoldProps = {
   continueDisabled?: boolean;
   centerContent?: boolean;
   children: React.ReactNode;
-
-  entryDate?: string;
 };
 
 function formatEntryDate(entryDate?: string) {
@@ -42,9 +50,15 @@ function formatEntryDate(entryDate?: string) {
     });
   }
 
-  const [year, month, day] = entryDate.split('-').map(Number);
+  const [year, month, day] = entryDate
+    .split('-')
+    .map(Number);
 
-  return new Date(year, month - 1, day).toLocaleDateString('en-NZ', {
+  return new Date(
+    year,
+    month - 1,
+    day,
+  ).toLocaleDateString('en-NZ', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -63,9 +77,23 @@ export default function StepScaffold({
   continueDisabled,
   centerContent = true,
   children,
-  entryDate,
 }: StepScaffoldProps) {
-  const { current, total } = getStepPosition(stepKey);
+  const { draft } = useNewEntry();
+
+  const {
+    trackingOptions: currentTrackingOptions,
+  } = useJournalingPreferences();
+
+  const trackingOptions =
+    draft.trackingOptions ??
+    currentTrackingOptions;
+
+  const { current, total } =
+    getStepPosition(
+      stepKey,
+      trackingOptions,
+    );
+
   const isFirstStep = current === 1;
 
   const handleBack = () => {
@@ -74,7 +102,11 @@ export default function StepScaffold({
       return;
     }
 
-    const previous = getPreviousStepRoute(stepKey);
+    const previous =
+      getPreviousStepRoute(
+        stepKey,
+        trackingOptions,
+      );
 
     if (previous) {
       router.replace(previous);
@@ -82,7 +114,10 @@ export default function StepScaffold({
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView
+      style={styles.safe}
+      edges={['top']}
+    >
       <View style={styles.container}>
         <View style={styles.topBar}>
           <TouchableOpacity
@@ -91,47 +126,64 @@ export default function StepScaffold({
             style={styles.navButton}
           >
             <Ionicons
-              name={isFirstStep ? 'close' : 'chevron-back'}
+              name={
+                isFirstStep
+                  ? 'close'
+                  : 'chevron-back'
+              }
               size={24}
               color={colors.muted}
             />
           </TouchableOpacity>
 
           <Text style={styles.dateText}>
-            {formatEntryDate(entryDate)}
+            {formatEntryDate(draft.entryDate)}
           </Text>
 
           <View style={styles.navButton}>
             {skippable && (
-              <TouchableOpacity onPress={onSkip} hitSlop={10}>
-                <Text style={styles.skipText}>Skip</Text>
+              <TouchableOpacity
+                onPress={onSkip}
+                hitSlop={10}
+              >
+                <Text style={styles.skipText}>
+                  Skip
+                </Text>
               </TouchableOpacity>
             )}
           </View>
         </View>
 
         <View style={styles.progressRow}>
-          {Array.from({ length: total }).map((_, i) => (
-            <View
-              key={i}
-              style={[
-                styles.progressBar,
-                i < current && styles.progressBarActive,
-              ]}
-            />
-          ))}
+          {Array.from({ length: total }).map(
+            (_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.progressBar,
+                  i < current &&
+                    styles.progressBarActive,
+                ]}
+              />
+            ),
+          )}
         </View>
 
         <View
           style={[
             styles.content,
-            centerContent && styles.contentCentered,
+            centerContent &&
+              styles.contentCentered,
           ]}
         >
-          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.title}>
+            {title}
+          </Text>
 
           {subtitle ? (
-            <Text style={styles.subtitle}>{subtitle}</Text>
+            <Text style={styles.subtitle}>
+              {subtitle}
+            </Text>
           ) : null}
 
           <View style={styles.stepBody}>
@@ -143,13 +195,18 @@ export default function StepScaffold({
           <TouchableOpacity
             style={[
               styles.continueButton,
-              continueDisabled && styles.continueButtonDisabled,
+              continueDisabled &&
+                styles.continueButtonDisabled,
             ]}
             onPress={onContinue}
             disabled={continueDisabled}
             activeOpacity={0.85}
           >
-            <Text style={styles.continueButtonText}>
+            <Text
+              style={
+                styles.continueButtonText
+              }
+            >
               {continueLabel}
             </Text>
           </TouchableOpacity>

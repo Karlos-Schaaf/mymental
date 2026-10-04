@@ -88,16 +88,21 @@ export default function ResourcesScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
+      {/* Header (fixed, matches Journal and Dashboard) */}
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.eyebrow}>MY MENTAL</Text>
+          <Text style={styles.headerTitle}>Resources</Text>
+        </View>
+      </View>
+
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Resources</Text>
-          <Text style={styles.headerDescription}>
-            Find trusted support, practical guidance and tools for your wellbeing.
-          </Text>
-        </View>
+        <Text style={styles.headerDescription}>
+          Find trusted support, practical guidance and tools for your wellbeing.
+        </Text>
 
         <View style={styles.introCard}>
           <View style={styles.introIcon}>
@@ -207,21 +212,35 @@ const styles = StyleSheet.create({
     backgroundColor: colors.paper,
   },
 
-  scrollContent: {
+  header: {
+    minHeight: 92,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xxl,
-    gap: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
 
-  header: {
-    paddingTop: spacing.md,
-    gap: spacing.xs,
+  eyebrow: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 11,
+    letterSpacing: 1.2,
+    color: colors.muted,
+    marginBottom: spacing.xs,
   },
 
   headerTitle: {
-    fontFamily: fonts.sansSemiBold,
-    fontSize: 24,
+    fontFamily: fonts.serif,
+    fontSize: 30,
     color: colors.ink,
+  },
+
+  scrollContent: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xxl,
+    gap: spacing.lg,
   },
 
   headerDescription: {

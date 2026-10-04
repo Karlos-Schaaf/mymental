@@ -32,6 +32,8 @@ export const colors = {
   muted: '#A09080',
   mutedLight: '#B0A898',
   white: '#FFFFFF',
+
+  neutral: '#6b6c61',
 };
 
 export const fonts = {

@@ -31,8 +31,8 @@ export default function LoginScreen() {
     try {
       await login(email.trim(), password);
       router.replace('/(tabs)');
-    } catch (error: any) {
-      Alert.alert('Login Failed', error.message ?? 'Please try again.');
+    } catch {
+      Alert.alert('Login credientials failed', 'Please check your details');
     } finally {
       setLoading(false);
     }

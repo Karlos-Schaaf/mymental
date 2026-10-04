@@ -62,8 +62,7 @@ export default function WriteStepScreen() {
 
       if (draft.id) {
         // Editing an existing entry.
-        // Keep its original timestamp so editing does not
-        // accidentally move the entry to a different time/day.
+        // Keep its original timestamp and tracking options.
         await updateEntry({
           id: draft.id,
           title: draft.title,
@@ -76,12 +75,15 @@ export default function WriteStepScreen() {
           screenTime: draft.screenTime,
           stress: draft.stress,
           energy: draft.energy,
+          trackingOptions: draft.trackingOptions,
           createdAt:
             draft.createdAt ??
             getEntryCreatedAt(draft.entryDate),
         });
       } else {
         // Creating a new entry.
+        // Save the current journaling settings snapshot
+        // that was captured when this entry was started.
         await addEntry({
           title: draft.title,
           content,
@@ -93,6 +95,7 @@ export default function WriteStepScreen() {
           screenTime: draft.screenTime,
           stress: draft.stress,
           energy: draft.energy,
+          trackingOptions: draft.trackingOptions,
           createdAt: getEntryCreatedAt(
             draft.entryDate,
           ),
@@ -127,10 +130,11 @@ export default function WriteStepScreen() {
         saving ? 'Saving…' : 'Save Entry'
       }
       continueDisabled={
-        saving || !draft.content?.trim()
+        saving ||
+        !draft.content?.trim()
       }
       centerContent={false}
-      entryDate={draft.entryDate}
+
     >
       <WriteStep
         title={draft.title ?? ''}

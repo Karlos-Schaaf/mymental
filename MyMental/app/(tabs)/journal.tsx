@@ -334,7 +334,7 @@ export default function JournalScreen() {
         <View style={styles.header}>
           <View>
             <Text style={styles.eyebrow}>
-              YOUR JOURNAL
+              MY MENTAL
             </Text>
 
             <Text style={styles.headerTitle}>

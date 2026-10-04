@@ -46,8 +46,8 @@ export default function SignupScreen() {
 
 await startOnboarding(userCredential.user.uid);
 
-} catch (error: any) {
-      Alert.alert('Sign Up Failed', error.message ?? 'Please try again.');
+} catch {
+      Alert.alert('Sign Up Failed', 'Email invalid');
     } finally {
       setLoading(false);
     }
