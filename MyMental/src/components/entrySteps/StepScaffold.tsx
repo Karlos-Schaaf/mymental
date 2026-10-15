@@ -4,6 +4,11 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  ScrollView,
+  Pressable,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import {
   SafeAreaView,
@@ -25,7 +30,7 @@ import {
 } from '../../constants/entrySteps';
 
 import { useNewEntry } from '../../context/NewEntryContext';
-import { useJournalingPreferences } from '../../hooks/useJournalingPreferences';
+import { useJournalingPreferences } from '../../context/JournalPreferencesContext';
 
 type StepScaffoldProps = {
   stepKey: EntryStepKey;
@@ -118,7 +123,15 @@ export default function StepScaffold({
       style={styles.safe}
       edges={['top']}
     >
-      <View style={styles.container}>
+      {/* Lifts the footer button above the keyboard */}
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={
+          Platform.OS === 'ios'
+            ? 'padding'
+            : undefined
+        }
+      >
         <View style={styles.topBar}>
           <TouchableOpacity
             onPress={handleBack}
@@ -169,27 +182,47 @@ export default function StepScaffold({
           )}
         </View>
 
-        <View
-          style={[
-            styles.content,
-            centerContent &&
-              styles.contentCentered,
-          ]}
+        {/*
+          The step content scrolls when it grows (e.g. a long journal
+          entry). Dragging the page, or tapping any empty area of it,
+          dismisses the keyboard. "handled" lets taps on buttons and
+          inputs work normally while the keyboard is open.
+        */}
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={
+            Platform.OS === 'ios'
+              ? 'interactive'
+              : 'on-drag'
+          }
+          showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.title}>
-            {title}
-          </Text>
-
-          {subtitle ? (
-            <Text style={styles.subtitle}>
-              {subtitle}
+          <Pressable
+            onPress={Keyboard.dismiss}
+            accessible={false}
+            style={[
+              styles.dismissArea,
+              centerContent &&
+                styles.dismissAreaCentered,
+            ]}
+          >
+            <Text style={styles.title}>
+              {title}
             </Text>
-          ) : null}
 
-          <View style={styles.stepBody}>
-            {children}
-          </View>
-        </View>
+            {subtitle ? (
+              <Text style={styles.subtitle}>
+                {subtitle}
+              </Text>
+            ) : null}
+
+            <View style={styles.stepBody}>
+              {children}
+            </View>
+          </Pressable>
+        </ScrollView>
 
         <View style={styles.footer}>
           <TouchableOpacity
@@ -211,7 +244,7 @@ export default function StepScaffold({
             </Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -264,12 +297,22 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
 
-  content: {
+  scroll: {
     flex: 1,
-    paddingHorizontal: spacing.xl,
   },
 
-  contentCentered: {
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.lg,
+  },
+
+  // Fills the scroll area so a tap anywhere in it dismisses the keyboard.
+  dismissArea: {
+    flexGrow: 1,
+  },
+
+  dismissAreaCentered: {
     justifyContent: 'center',
     paddingBottom: spacing.xxxl,
   },

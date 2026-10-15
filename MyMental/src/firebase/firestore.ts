@@ -77,11 +77,10 @@ export async function saveJournalEntry(
 ) {
   const payload = omitUndefined({
     ...entry,
-    createdAt: Timestamp.fromDate(
-      entry.createdAt instanceof Date
-        ? entry.createdAt
-        : new Date()
-    ),
+    createdAt:
+  entry.createdAt instanceof Date
+    ? Timestamp.fromDate(entry.createdAt)
+    : entry.createdAt,
   });
 
   const ref = await addDoc(

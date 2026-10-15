@@ -645,10 +645,11 @@ function DriverRow({ driver, positive }: { driver: Driver; positive: boolean }) 
           <Text style={[styles.driverConfidence, { color: tone }]}>{confidence}</Text>
         </View>
 
-        <Text style={styles.driverText}>
-          Mood averages {highMood.toFixed(1)} on {metric.high}, vs {lowMood.toFixed(1)} on{' '}
-          {metric.low}.
-        </Text>
+<Text style={styles.driverText}>
+  Mood is {MOOD_LABEL[moodKeyFromAvg(highMood)].toLowerCase()} on {metric.high}, vs{' '}
+  {MOOD_LABEL[moodKeyFromAvg(lowMood)].toLowerCase()} on {metric.low}.
+</Text>
+
       </View>
     </View>
   );
@@ -772,7 +773,7 @@ function LineChart({ points }: { points: ChartPoint[] }) {
     { score: 4, label: 'Good' },
     { score: 3, label: 'OK' },
     { score: 2, label: 'Bad' },
-    { score: 1, label: 'V.Bad' },
+    { score: 1, label: 'Very Bad' },
   ];
 
   return (
