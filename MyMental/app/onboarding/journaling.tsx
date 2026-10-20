@@ -169,7 +169,7 @@ export default function JournalingPreferencesScreen() {
           </Text>
 
           <Text style={styles.subtitle}>
-            Choose what you'd like to include in your journal.
+            Choose what you&apos;d like to include in your journal.
             You can change these later in Journaling Settings.
           </Text>
         </View>

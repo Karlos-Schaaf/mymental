@@ -46,8 +46,53 @@ export default function SignupScreen() {
 
 await startOnboarding(userCredential.user.uid);
 
-} catch {
-      Alert.alert('Sign Up Failed', 'Email invalid');
+    } catch (error: unknown) {
+      const code =
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        typeof error.code === 'string'
+          ? error.code
+          : '';
+
+      let message = 'Something went wrong. Please try again.';
+
+      switch (code) {
+        case 'auth/email-already-in-use':
+          message =
+            'An account with this email already exists. Please log in instead.';
+          break;
+
+        case 'auth/invalid-email':
+          message = 'Please enter a valid email address.';
+          break;
+
+        case 'auth/weak-password':
+          message =
+            'Your password is too weak. Please choose a stronger password.';
+          break;
+
+        case 'auth/network-request-failed':
+          message =
+            'Unable to connect. Check your internet connection and try again.';
+          break;
+
+        case 'auth/operation-not-allowed':
+          message =
+            'Email and password sign-up is currently unavailable. Please contact support.';
+          break;
+
+        case 'auth/too-many-requests':
+          message =
+            'Too many attempts. Please wait before trying again.';
+          break;
+
+        default:
+          message =
+            'Unable to create your account. Please try again later.';
+      }
+
+      Alert.alert('Sign Up Failed', message);
     } finally {
       setLoading(false);
     }

@@ -87,33 +87,21 @@ export function JournalingPreferencesProvider({
     const unsubscribe = subscribeToUserDoc(
       user.uid,
       (userDoc) => {
-        const savedOptions =
-          userDoc?.preferences?.journaling?.trackingOptions;
+  const savedOptions =
+    userDoc?.preferences?.journaling?.trackingOptions;
 
-        const validOptions =
-          getValidTrackingOptions(savedOptions);
+  const validOptions =
+    getValidTrackingOptions(savedOptions);
 
-        if (validOptions) {
-          console.log(
-            'JOURNALING PREFERENCES UPDATED:',
-            validOptions,
-          );
+  if (validOptions) {
+    setTrackingOptions(validOptions);
+  } else {
+    setTrackingOptions(DEFAULT_JOURNALING_OPTIONS);
+  }
 
-          setTrackingOptions(validOptions);
-        } else {
-          console.log(
-            'USING DEFAULT JOURNALING PREFERENCES:',
-            DEFAULT_JOURNALING_OPTIONS,
-          );
-
-          setTrackingOptions(
-            DEFAULT_JOURNALING_OPTIONS,
-          );
-        }
-
-        setError(null);
-        setLoading(false);
-      },
+  setError(null);
+  setLoading(false);
+},
     );
 
     return unsubscribe;

@@ -31,9 +31,38 @@ export default function LoginScreen() {
     try {
       await login(email.trim(), password);
       router.replace('/(tabs)');
-    } catch {
-      Alert.alert('Login credientials failed', 'Please check your details');
-    } finally {
+    } catch (error: any) {
+  let message = 'Something went wrong. Please try again.';
+
+  switch (error.code) {
+    case 'auth/invalid-email':
+      message = 'Please enter a valid email address.';
+      break;
+
+    case 'auth/invalid-credential':
+    case 'auth/wrong-password':
+    case 'auth/user-not-found':
+      message = 'Incorrect email or password. Please try again.';
+      break;
+
+    case 'auth/user-disabled':
+      message = 'This account has been disabled. Please contact support.';
+      break;
+
+    case 'auth/too-many-requests':
+      message = 'Too many attempts. Please wait before trying again.';
+      break;
+
+    case 'auth/network-request-failed':
+      message = 'Unable to connect. Check your internet connection and try again.';
+      break;
+
+    default:
+      message = 'Unable to log in. Please try again later.';
+  }
+
+  Alert.alert('Login failed', message);
+} finally {
       setLoading(false);
     }
   };

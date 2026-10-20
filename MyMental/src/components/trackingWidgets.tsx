@@ -55,23 +55,23 @@ const METRICS: Partial<
     decimals: 1,
   },
   productivity: {
-    title: 'Productivity',
-    icon: 'checkmark-done-outline',
-    suffix: '/10',
-    decimals: 1,
-  },
+  title: 'Productivity',
+  icon: 'checkmark-done-outline',
+  suffix: '',
+  decimals: 0,
+},
   physicalActivity: {
-    title: 'Activity',
-    icon: 'walk-outline',
-    suffix: ' min',
-    decimals: 0,
-  },
+  title: 'Physical Activity',
+  icon: 'walk-outline',
+  suffix: '',
+  decimals: 0,
+},
   socialInteraction: {
-    title: 'Social',
-    icon: 'people-outline',
-    suffix: '/10',
-    decimals: 1,
-  },
+  title: 'Social Interaction',
+  icon: 'people-outline',
+  suffix: '',
+  decimals: 0,
+},
   screenTime: {
     title: 'Screen Time',
     icon: 'phone-portrait-outline',
@@ -79,6 +79,9 @@ const METRICS: Partial<
     decimals: 1,
   },
 };
+
+
+
 
 // Display order matches the Journaling Settings screen.
 const WIDGET_ORDER: JournalTrackingOption[] = [
@@ -96,6 +99,30 @@ const WIDGET_ORDER: JournalTrackingOption[] = [
 const FIELD_FOR_OPTION: Partial<Record<JournalTrackingOption, string>> = {
   sleep: 'sleepHours',
 };
+
+function getActivityLabel(value: number): string {
+  if (value <= 2) return 'Sedentary';
+  if (value <= 4) return 'Lightly active';
+  if (value <= 6) return 'Moderately active';
+  if (value <= 8) return 'Active';
+  return 'Very active';
+}
+
+function getSocialLabel(value: number): string {
+  if (value <= 2) return 'Isolated';
+  if (value <= 4) return 'Mostly alone';
+  if (value <= 6) return 'Some interaction';
+  if (value <= 8) return 'Well connected';
+  return 'Very connected';
+}
+
+function getProductivityLabel(value: number): string {
+  if (value <= 2) return 'Unproductive';
+  if (value <= 4) return 'Somewhat unproductive';
+  if (value <= 6) return 'Neutral';
+  if (value <= 8) return 'Productive';
+  return 'Very productive';
+}
 
 function weeklyAverage(
   entries: JournalEntry[],
@@ -181,10 +208,16 @@ export default function TrackingWidgets({
           <Text style={styles.label}>{config.title}</Text>
 
           <Text style={styles.value}>
-            {average !== null
-              ? `${average.toFixed(config.decimals)}${config.suffix}`
-              : '—'}
-          </Text>
+  {average !== null
+    ? id === 'physicalActivity'
+      ? getActivityLabel(average)
+      : id === 'socialInteraction'
+        ? getSocialLabel(average)
+        : id === 'productivity'
+          ? getProductivityLabel(average)
+          : `${average.toFixed(config.decimals)}${config.suffix}`
+    : '—'}
+</Text>
 
           <Text style={styles.subtitle}>
             {average !== null
@@ -223,7 +256,7 @@ const styles = StyleSheet.create({
 
   value: {
     fontFamily: fonts.sansSemiBold,
-    fontSize: 22,
+    fontSize: 20,
     color: colors.ink,
   },
 

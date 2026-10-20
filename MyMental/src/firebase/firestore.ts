@@ -240,7 +240,24 @@ export async function completeOnboarding(
 
 export async function deleteUserDoc(
   uid: string,
-) {
+): Promise<void> {
+  // Delete all journal entries first
+  const entriesRef = collection(
+    db,
+    "users",
+    uid,
+    "entries",
+  );
+
+  const snapshot = await getDocs(entriesRef);
+
+  await Promise.all(
+    snapshot.docs.map((entry) =>
+      deleteDoc(entry.ref),
+    ),
+  );
+
+  // Delete the user document after all entries are deleted
   await deleteDoc(
     doc(db, "users", uid),
   );
